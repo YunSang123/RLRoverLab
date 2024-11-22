@@ -38,7 +38,9 @@ https://github.com/user-attachments/assets/98032f5c-1cdc-42c2-8a94-57d52740d026
 
 
 ## Video of trained RL-agent
-https://github.com/abmoRobotics/isaac_rover_orbit/assets/56405924/84a9f405-f537-4041-9d1f-8a2307f450a7
+https://github.com/user-attachments/assets/44844311-87cd-45cb-a933-f451376f27d8
+
+
 
 ## Support
 

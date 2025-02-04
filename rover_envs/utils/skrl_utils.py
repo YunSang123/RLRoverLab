@@ -186,13 +186,13 @@ class SkrlSequentialLogTrainer(Trainer):
         * Log custom environment data: Log custom environment data.
         """
         # set running mode
-        if self.num_agents > 1:
+        if self.env.num_agents > 1:
             for agent in self.agents:
                 agent.set_running_mode("eval")
         else:
             self.agents.set_running_mode("eval")
         # single agent
-        if self.num_agents == 1:
+        if self.env.num_agents == 1:
             self.single_agent_eval()
             return
 

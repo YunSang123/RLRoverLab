@@ -32,7 +32,7 @@ def main():
     env_cfg = parse_env_cfg(
         args_cli.task, device="cuda:0" if not args_cli.cpu else "cpu", num_envs=args_cli.num_envs
     )
-
+    
     env = gym.make(args_cli.task, cfg=env_cfg)
 
     print(f'[INFO]: Created environment with task: {args_cli.task}')

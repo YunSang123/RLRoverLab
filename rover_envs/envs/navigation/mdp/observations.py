@@ -42,6 +42,12 @@ def height_scan_rover(env: ManagerBasedRLEnv, sensor_cfg: SceneEntityCfg) -> tor
     sensor: RayCaster = env.scene.sensors[sensor_cfg.name]
     # height scan: height = sensor_height - hit_point_z - 0.26878
     # Note: 0.26878 is the distance between the sensor and the rover's base
+    # 0.26878은 sensor와 rover의 발바닥면 사이의 거리
+    
+    # print("\nisaac_rover/rover_envs/evs/navigation/mdp/observations.py에서 실행")
+    # print("sensor.data.pos_w = ", sensor.data.pos_w)
+    # print("sensor.data.ray_hits_w", sensor.data.ray_hits_w)
+    # print("Height : ", sensor.data.pos_w[:, 2].unsqueeze(1) - sensor.data.ray_hits_w[..., 2] - 0.26878)
     return sensor.data.pos_w[:, 2].unsqueeze(1) - sensor.data.ray_hits_w[..., 2] - 0.26878
 
 

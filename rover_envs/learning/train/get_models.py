@@ -1,3 +1,4 @@
+import torchsummary
 
 from gymnasium.spaces.box import Box
 from omni.isaac.lab.envs import ManagerBasedRLEnv
@@ -71,6 +72,7 @@ def get_model_gaussian(env: ManagerBasedRLEnv, observation_space: Box, action_sp
 def get_model_gaussian_conv(env: ManagerBasedRLEnv, observation_space: Box, action_space: Box):
     models = {}
     encoder_input_size = env.observation_manager.group_obs_term_dim["policy"][-1][0]
+    print("encoder_input_size : ",encoder_input_size)
 
     mlp_input_size = 5
 
@@ -96,6 +98,10 @@ def get_model_gaussian_conv(env: ManagerBasedRLEnv, observation_space: Box, acti
         encoder_layers=[8, 16, 32, 64],
         encoder_activation="leaky_relu",
     )
+    print("============!!!!!!!!!!!!!!!!!!!!!!!!!!!!===========================================================")
+    print("models 정보 출력중:")
+    print(models)
+    print("============!!!!!!!!!!!!!!!!!!!!!!!!!!!!===========================================================")
     return models
 
 

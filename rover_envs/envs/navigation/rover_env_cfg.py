@@ -3,7 +3,9 @@ from __future__ import annotations
 import math
 import os
 from dataclasses import MISSING
+import inspect
 
+# isaac_lab/source/extensions/omni.isaac.lab/ 디렉터리로부터 import하는 것
 import omni.isaac.lab.sim as sim_utils
 from omni.isaac.lab.assets import ArticulationCfg, AssetBaseCfg
 from omni.isaac.lab.envs import ManagerBasedRLEnvCfg
@@ -35,9 +37,9 @@ from rover_envs.envs.navigation.utils.terrains.commands_cfg import TerrainBasedP
 from rover_envs.envs.navigation.utils.terrains.terrain_importer import RoverTerrainImporter  # noqa: F401
 from rover_envs.envs.navigation.utils.terrains.terrain_importer import TerrainBasedPositionCommand  # noqa: F401
 
-
 @configclass
 class RoverSceneCfg(MarsTerrainSceneCfg):
+    
     """
     Rover Scene Configuration
 
@@ -82,16 +84,24 @@ class RoverSceneCfg(MarsTerrainSceneCfg):
     )
     # contact_sensor = None
 
-    height_scanner = RayCasterCfg(
+    dense_height_scanner = RayCasterCfg(
         prim_path="{ENV_REGEX_NS}/Robot/Body",
         offset=RayCasterCfg.OffsetCfg(pos=[0.0, 0.0, 10.0]),
         attach_yaw_only=True,
-        pattern_cfg=patterns.GridPatternCfg(resolution=0.05, size=[5.0, 5.0]),
-        debug_vis=False,
+        pattern_cfg=patterns.GridPatternCfg(resolution=0.05, size=[3.5, 3.5]),
+        debug_vis=True,
         mesh_prim_paths=["/World/terrain/hidden_terrain"],
         max_distance=100.0,
     )
-
+    sparse_height_scanner = RayCasterCfg(
+        prim_path="{ENV_REGEX_NS}/Robot/Body",
+        offset=RayCasterCfg.OffsetCfg(pos=[0.0, 0.0, 8.0]),
+        attach_yaw_only=True,
+        pattern_cfg=patterns.GridPatternCfg(resolution=0.15, size=[9.0, 9.0]),
+        debug_vis=True,
+        mesh_prim_paths=["/World/terrain/hidden_terrain"],
+        max_distance=100.0,
+    )
 
 @configclass
 class ActionsCfg:
@@ -122,10 +132,15 @@ class ObservationCfg:
             params={"command_name": "target_pose"},
             scale=1 / math.pi
         )
-        height_scan = ObsTerm(
+        dense_height_scan = ObsTerm(
             func=mdp.height_scan_rover,
             scale=1,
-            params={"sensor_cfg": SceneEntityCfg(name="height_scanner")},
+            params={"sensor_cfg": SceneEntityCfg(name="dense_height_scanner")},
+        )
+        sparse_height_scan = ObsTerm(
+            func=mdp.height_scan_rover,
+            scale=1,
+            params={"sensor_cfg": SceneEntityCfg(name="sparse_height_scanner")},
         )
 
         def __post_init__(self):
@@ -283,13 +298,20 @@ class RoverEnvCfg(ManagerBasedRLEnvCfg):
     # curriculum: CurriculumCfg = CurriculumCfg()
 
     def __post_init__(self):
-        self.sim.dt = 1 / 30.0
+        self.sim.dt = 1 / 60.0
         self.decimation = 6
         self.episode_length_s = 150
         self.viewer.eye = (-6.0, -6.0, 3.5)
 
         # update sensor periods
-        if self.scene.height_scanner is not None:
-            self.scene.height_scanner.update_period = self.sim.dt * self.decimation
+        if self.scene.dense_height_scanner is not None:
+            self.scene.dense_height_scanner.update_period = self.sim.dt * self.decimation
+            self.scene.sparse_height_scanner.update_period = self.sim.dt * self.decimation
         if self.scene.contact_sensor is not None:
             self.scene.contact_sensor.update_period = self.sim.dt * self.decimation
+            
+        # 원본은 다음과 같음.
+        # if self.scene.height_scanner is not None:
+        #     self.scene.height_scanner.update_period = self.sim.dt * self.decimation
+        # if self.scene.contact_sensor is not None:
+        #     self.scene.contact_sensor.update_period = self.sim.dt * self.decimation

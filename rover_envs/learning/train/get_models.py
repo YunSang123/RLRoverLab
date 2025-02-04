@@ -71,9 +71,11 @@ def get_model_gaussian(env: ManagerBasedRLEnv, observation_space: Box, action_sp
 
 def get_model_gaussian_conv(env: ManagerBasedRLEnv, observation_space: Box, action_space: Box):
     models = {}
-    encoder_input_size = env.observation_manager.group_obs_term_dim["policy"][-1][0]
-    print("encoder_input_size : ",encoder_input_size)
-
+    dense_encoder_input_size = env.observation_manager.group_obs_term_dim["policy"][-2][0]
+    sparse_encoder_input_size = env.observation_manager.group_obs_term_dim["policy"][-1][0]
+    # print("isaac_rover/rover_envs/learning/train/get_models.py\n"*10)
+    # print("dense : ", dense_encoder_input_size)
+    # print("sparse : ", sparse_encoder_input_size)
     mlp_input_size = 5
 
     models["policy"] = GaussianNeuralNetworkConv(
@@ -83,7 +85,8 @@ def get_model_gaussian_conv(env: ManagerBasedRLEnv, observation_space: Box, acti
         mlp_input_size=mlp_input_size,
         mlp_layers=[256, 160, 128],
         mlp_activation="leaky_relu",
-        encoder_input_size=encoder_input_size,
+        dense_encoder_input_size=dense_encoder_input_size,
+        sparse_encoder_input_size=sparse_encoder_input_size,
         encoder_layers=[8, 16, 32, 64],
         encoder_activation="leaky_relu",
     )
@@ -94,7 +97,8 @@ def get_model_gaussian_conv(env: ManagerBasedRLEnv, observation_space: Box, acti
         mlp_input_size=mlp_input_size,
         mlp_layers=[256, 160, 128],
         mlp_activation="leaky_relu",
-        encoder_input_size=encoder_input_size,
+        dense_encoder_input_size=dense_encoder_input_size,
+        sparse_encoder_input_size=sparse_encoder_input_size,
         encoder_layers=[8, 16, 32, 64],
         encoder_activation="leaky_relu",
     )

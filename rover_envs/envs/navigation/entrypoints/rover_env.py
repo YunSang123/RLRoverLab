@@ -43,7 +43,7 @@ class RoverEnv(ManagerBasedRLEnv):
 
     # This function is reimplemented to make visualization less laggy
     def step(self, action: torch.Tensor) -> VecEnvStepReturn:
-        print("step진짜 찾음!")
+        # print("step진짜 찾음!")
         """Execute one time-step of the environment's dynamics and reset terminated environments.
 
         Unlike the :class:`ManagerBasedEnv.step` class, the function performs the following operations:

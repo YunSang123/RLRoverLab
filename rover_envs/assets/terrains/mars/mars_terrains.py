@@ -21,6 +21,9 @@ class MarsTerrainSceneCfg(InteractiveSceneCfg):
     """
     # Hidden Terrain (merged terrain of ground and obstacles) for raycaster.
     # This is done because the raycaster doesn't work with multiple meshes
+    
+    
+    
     hidden_terrain = AssetBaseCfg(
         prim_path="/World/terrain/hidden_terrain",
         spawn=sim_utils.UsdFileCfg(
@@ -60,3 +63,5 @@ class MarsTerrainSceneCfg(InteractiveSceneCfg):
         ),
         init_state=AssetBaseCfg.InitialStateCfg(pos=(0.0, 0.0, 0.0)),
     )
+    
+    # ground = AssetBaseCfg(prim_path="/World/terrain/hidden_terrain", spawn=sim_utils.GroundPlaneCfg())

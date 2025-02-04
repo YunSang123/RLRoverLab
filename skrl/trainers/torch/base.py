@@ -182,16 +182,16 @@ class Trainer:
             # compute actions
             with torch.no_grad():
                 actions = self.agents.act(states, timestep=timestep, timesteps=self.timesteps)[0]
-                print("actions\n", actions)
-                print("states\n", states)
+                # print("actions\n", actions)
+                # print("states\n", states)
                 
                 # 상태 저장
                 # self.state_history.append(states.clone())  # clone() 사용해 복사본 저장
                 
-                print("isaac_rover/skrl/trainers/torch/base.py")
-                print(type(self.env))  # 현재 self.env가 어떤 클래스의 인스턴스인지 확인
-                print(self.env.__class__.__mro__)  # 클래스의 상속 계층 구조 확인
-                print("isaac_rover/skrl/trainers/torch/base.py")
+                # print("isaac_rover/skrl/trainers/torch/base.py")
+                # print(type(self.env))  # 현재 self.env가 어떤 클래스의 인스턴스인지 확인
+                # print(self.env.__class__.__mro__)  # 클래스의 상속 계층 구조 확인
+                # print("isaac_rover/skrl/trainers/torch/base.py")
                 
                 # step the environments
                 next_states, rewards, terminated, truncated, infos = self.env.step(actions)

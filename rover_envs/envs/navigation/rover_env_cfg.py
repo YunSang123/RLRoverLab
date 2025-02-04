@@ -81,6 +81,7 @@ class RoverSceneCfg(MarsTerrainSceneCfg):
     contact_sensor = ContactSensorCfg(
         prim_path="{ENV_REGEX_NS}/Robot/.*_(Drive|Steer|Boogie|Body)",
         filter_prim_paths_expr=["/World/terrain/obstacles/obstacles"],
+        # filter_prim_paths_expr=["/World/terrain/obstacles/obstacles"],
     )
     # contact_sensor = None
 
@@ -88,8 +89,9 @@ class RoverSceneCfg(MarsTerrainSceneCfg):
         prim_path="{ENV_REGEX_NS}/Robot/Body",
         offset=RayCasterCfg.OffsetCfg(pos=[0.0, 0.0, 10.0]),
         attach_yaw_only=True,
-        pattern_cfg=patterns.GridPatternCfg(resolution=0.05, size=[3.5, 3.5]),
+        pattern_cfg=patterns.GridPatternCfg(resolution=0.05, size=[3.0, 3.0]),
         debug_vis=True,
+        # mesh_prim_paths=["/World/defaultGroundPlane"],
         mesh_prim_paths=["/World/terrain/hidden_terrain"],
         max_distance=100.0,
     )
@@ -97,8 +99,9 @@ class RoverSceneCfg(MarsTerrainSceneCfg):
         prim_path="{ENV_REGEX_NS}/Robot/Body",
         offset=RayCasterCfg.OffsetCfg(pos=[0.0, 0.0, 8.0]),
         attach_yaw_only=True,
-        pattern_cfg=patterns.GridPatternCfg(resolution=0.15, size=[9.0, 9.0]),
+        pattern_cfg=patterns.GridPatternCfg(resolution=0.15, size=[4.5, 4.5]),
         debug_vis=True,
+        # mesh_prim_paths=["/World/defaultGroundPlane"],
         mesh_prim_paths=["/World/terrain/hidden_terrain"],
         max_distance=100.0,
     )

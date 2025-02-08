@@ -49,6 +49,8 @@ class AckermannAction(ActionTerm):
         steering_order = cfg.steering_order
         drive_order = cfg.drive_order
         sorted_steering_joint_names = sorted(self._steering_joint_names, key=lambda x: steering_order.index(x[:2]))
+        print("\nisaac_rover/rover_envs/mdp/actions/ackermann_actions.py에서 실행"*10)
+        print("self._drive_joint_names\n",self._drive_joint_names)
         sorted_drive_joint_names = sorted(self._drive_joint_names, key=lambda x: drive_order.index(x[:2]))
         original_steering_id_positions = {name: i for i, name in enumerate(self._steering_joint_names)}
         original_drive_id_positions = {name: i for i, name in enumerate(self._drive_joint_names)}
@@ -96,90 +98,93 @@ class AckermannAction(ActionTerm):
         self._asset.set_joint_velocity_target(self._joint_vel, joint_ids=self._drive_joint_ids)
         self._asset.set_joint_position_target(self._joint_pos, joint_ids=self._steering_joint_ids)
 
+################################
+# 안쓰임
+################################
+# class AckermannActionNonVec():
+#     def __init__(self,
+#                  cfg: actions_cfg.AckermannActionCfg,
+#                  robot: Articulation,
+#                  num_envs: int,
+#                  device: torch.device):
+#         """ Initialize the AckermannActionNonVec
 
-class AckermannActionNonVec():
-    def __init__(self,
-                 cfg: actions_cfg.AckermannActionCfg,
-                 robot: Articulation,
-                 num_envs: int,
-                 device: torch.device):
-        """ Initialize the AckermannActionNonVec
+#         Args:
+#             cfg (actions_cfg.AckermannActionCfg): configuration for the ackermann action
+#             robot (Articulation): robot asset
+#             num_envs (int): number of environments
+#             device (torch.device): device to run the operation on
+#         """
+#         # Initialize Parameters
+#         self.cfg = cfg
+#         self.device = device
+#         self.num_envs = num_envs
+#         self._asset = robot
 
-        Args:
-            cfg (actions_cfg.AckermannActionCfg): configuration for the ackermann action
-            robot (Articulation): robot asset
-            num_envs (int): number of environments
-            device (torch.device): device to run the operation on
-        """
-        # Initialize Parameters
-        self.cfg = cfg
-        self.device = device
-        self.num_envs = num_envs
-        self._asset = robot
+#         # Find the joint ids and names for the drive and steering joints
+#         self._drive_joint_ids, self._drive_joint_names = self._asset.find_joints(self.cfg.drive_joint_names)
 
-        # Find the joint ids and names for the drive and steering joints
-        self._drive_joint_ids, self._drive_joint_names = self._asset.find_joints(self.cfg.drive_joint_names)
+#         self._steering_joint_ids, self._steering_joint_names = self._asset.find_joints(self.cfg.steering_joint_names)
 
-        self._steering_joint_ids, self._steering_joint_names = self._asset.find_joints(self.cfg.steering_joint_names)
+#         # Remap joints to the order specified in the config.
+#         steering_order = cfg.steering_order
+#         drive_order = cfg.drive_order
+#         sorted_steering_joint_names = sorted(self._steering_joint_names, key=lambda x: steering_order.index(x[:2]))
+#         sorted_drive_joint_names = sorted(self._drive_joint_names, key=lambda x: drive_order.index(x[:2]))
+#         original_steering_id_positions = {name: i for i, name in enumerate(self._steering_joint_names)}
+#         original_drive_id_positions = {name: i for i, name in enumerate(self._drive_joint_names)}
+#         self._sorted_steering_ids = [self._steering_joint_ids[original_steering_id_positions[name]]
+#                                      for name in sorted_steering_joint_names]
+#         self._sorted_drive_ids = [self._drive_joint_ids[original_drive_id_positions[name]]
+#                                   for name in sorted_drive_joint_names]
 
-        # Remap joints to the order specified in the config.
-        steering_order = cfg.steering_order
-        drive_order = cfg.drive_order
-        sorted_steering_joint_names = sorted(self._steering_joint_names, key=lambda x: steering_order.index(x[:2]))
-        sorted_drive_joint_names = sorted(self._drive_joint_names, key=lambda x: drive_order.index(x[:2]))
-        original_steering_id_positions = {name: i for i, name in enumerate(self._steering_joint_names)}
-        original_drive_id_positions = {name: i for i, name in enumerate(self._drive_joint_names)}
-        self._sorted_steering_ids = [self._steering_joint_ids[original_steering_id_positions[name]]
-                                     for name in sorted_steering_joint_names]
-        self._sorted_drive_ids = [self._drive_joint_ids[original_drive_id_positions[name]]
-                                  for name in sorted_drive_joint_names]
+#         carb.log_info(
+#             f" {self._drive_joint_ids} [{self._drive_joint_names}]"
+#             f" {self._steering_joint_ids} [{self._steering_joint_names}]"
+#         )
 
-        carb.log_info(
-            f" {self._drive_joint_ids} [{self._drive_joint_names}]"
-            f" {self._steering_joint_ids} [{self._steering_joint_names}]"
-        )
+#         # Create tensors for raw and processed actions
+#         self._raw_actions = torch.zeros(self.num_envs, self.action_dim, device=self.device)
+#         self._processed_actions = torch.zeros_like(self.raw_actions)
+#         self._joint_vel = torch.zeros(self.num_envs, len(self._drive_joint_ids), device=self.device)
+#         self._joint_pos = torch.zeros(self.num_envs, len(self._steering_joint_ids), device=self.device)
 
-        # Create tensors for raw and processed actions
-        self._raw_actions = torch.zeros(self.num_envs, self.action_dim, device=self.device)
-        self._processed_actions = torch.zeros_like(self.raw_actions)
-        self._joint_vel = torch.zeros(self.num_envs, len(self._drive_joint_ids), device=self.device)
-        self._joint_pos = torch.zeros(self.num_envs, len(self._steering_joint_ids), device=self.device)
+#         # Save the scale and offset for the actions
+#         self._scale = torch.tensor(self.cfg.scale, device=self.device).unsqueeze(0)
+#         self._offset = torch.tensor(self.cfg.offset, device=self.device).unsqueeze(0)
 
-        # Save the scale and offset for the actions
-        self._scale = torch.tensor(self.cfg.scale, device=self.device).unsqueeze(0)
-        self._offset = torch.tensor(self.cfg.offset, device=self.device).unsqueeze(0)
+#     @property
+#     def action_dim(self) -> int:
+#         return 2  # Assuming a 2D action vector (linear velocity, angular velocity)
 
-    @property
-    def action_dim(self) -> int:
-        return 2  # Assuming a 2D action vector (linear velocity, angular velocity)
+#     @property
+#     def raw_actions(self) -> torch.Tensor:
+#         return self._raw_actions
 
-    @property
-    def raw_actions(self) -> torch.Tensor:
-        return self._raw_actions
+#     @property
+#     def processed_actions(self) -> torch.Tensor:
+#         return self._processed_actions
 
-    @property
-    def processed_actions(self) -> torch.Tensor:
-        return self._processed_actions
+#     """
+#     Operations.
+#     """
 
-    """
-    Operations.
-    """
+#     def process_actions(self, actions):
+#         # Store the raw actions
+#         self._raw_actions[:] = actions
+#         self._processed_actions = self.raw_actions * self._scale + self._offset
 
-    def process_actions(self, actions):
-        # Store the raw actions
-        self._raw_actions[:] = actions
-        self._processed_actions = self.raw_actions * self._scale + self._offset
+#     def apply_actions(self):
+#         # Apply the actions to the rover
+#         self._joint_pos, self._joint_vel = ackermann(
+#             self._processed_actions[:, 0], self._processed_actions[:, 1], self.cfg, self.device)
 
-    def apply_actions(self):
-        # Apply the actions to the rover
-        self._joint_pos, self._joint_vel = ackermann(
-            self._processed_actions[:, 0], self._processed_actions[:, 1], self.cfg, self.device)
+#         self._asset.set_joint_velocity_target(self._joint_vel, joint_ids=self._sorted_drive_ids)
+#         self._asset.set_joint_position_target(self._joint_pos, joint_ids=self._sorted_steering_ids)
 
-        self._asset.set_joint_velocity_target(self._joint_vel, joint_ids=self._sorted_drive_ids)
-        self._asset.set_joint_position_target(self._joint_pos, joint_ids=self._sorted_steering_ids)
-
-
+# 쓰임!
 def ackermann(lin_vel, ang_vel, cfg, device):
+    
     """ Ackermann steering model for the rover
     Args:
         lin_vel (torch.Tensor): linear velocity of the rover

@@ -8,6 +8,7 @@ from pxr import PhysxSchema, Usd, UsdPhysics
 
 
 def trimesh_to_usd(vertices: np.ndarray, faces: np.ndarray, position=None, orientation=None, name="terrain"):
+    안쓰임
     """ Convert trimesh to USD
 
     Parameters
@@ -22,7 +23,7 @@ def trimesh_to_usd(vertices: np.ndarray, faces: np.ndarray, position=None, orien
     stage: Usd.Stage = get_current_stage()
 
     # Define terrain mesh
-    mesh_prim = stage.DefinePrim(f"/World/{name}", "Mesh")
+    mesh_prim = stage.DefinePrim(f"/World_jys/{name}", "Mesh")
     mesh_prim.GetAttribute("points").Set(vertices)
     mesh_prim.GetAttribute("faceVertexIndices").Set(faces.flatten())
     mesh_prim.GetAttribute("faceVertexCounts").Set(np.asarray([3] * faces.shape[0]))  # 3 vertices per face
@@ -61,6 +62,7 @@ def trimesh_to_usd(vertices: np.ndarray, faces: np.ndarray, position=None, orien
 
 
 def add_material_to_stage_from_mdl():
+    안쓰임
     # stage: Usd.Stage = get_current_stage()
 
     import omni.kit.commands
@@ -133,7 +135,9 @@ def add_material_to_stage_from_mdl():
     # Type float2
     # soil_rocky_prim.GetAttribute("inputs:texture_scale").Set([1.0, 1.0])
 
-
+###################
+# 쓰임!
+###################
 def get_triangles_and_vertices_from_prim(prim_path):
     """ Get triangles and vertices from prim """
     stage: Usd.Stage = get_current_stage()
@@ -151,6 +155,7 @@ def get_triangles_and_vertices_from_prim(prim_path):
 
 
 def apply_material(prim_path, material_path="/Looks/Soil_Rocky"):
+    안쓰임
     """ Apply material to prim """
     import omni.kit.commands
 

@@ -15,7 +15,7 @@ from omni.isaac.lab.app import AppLauncher      # Omniverse Isaac Sim을 실행�
 parser = argparse.ArgumentParser("Welcome to Orbit: Omniverse Robotics Environments!")
 parser.add_argument("--load", action="store_true", default=False, help="Load previous trained agent.pt")
 parser.add_argument("--headless", action="store_true", default=False, help="Force display off at all times.")           # GUI 없이 실행
-parser.add_argument("--video", action="store_true", default=False, help="Record videos during training.")               # 학습 중 비디오 녹화 여부
+parser.add_argument("--video", action="store_true", default=True, help="Record videos during training.")               # 학습 중 비디오 녹화 여부
 parser.add_argument("--video_length", type=int, default=200, help="Length of the recorded video (in steps).")           # 비디오 길이 설정.
 parser.add_argument("--video_interval", type=int, default=2000, help="Interval between video recordings (in steps).")   # 비디오 녹화 간격.
 parser.add_argument("--cpu", action="store_true", default=False, help="Use CPU pipeline.")                              # CPU 모드에서 실행 여부.

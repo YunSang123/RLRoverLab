@@ -39,6 +39,7 @@ def SkrlVecEnvWrapper(env: ManagerBasedRLEnv):
     if not isinstance(env.unwrapped, ManagerBasedRLEnv):
         raise ValueError(f"The environment must be inherited from ManagerBasedRLEnv. Environment type: {type(env)}")
     # wrap and return the environment
+    
     return wrap_env(env, wrapper="isaac-orbit")
 
 

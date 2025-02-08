@@ -61,9 +61,9 @@ class IsaacLabWrapper(Wrapper):
         :rtype: tuple of torch.Tensor and any other info
         """
         self._observations, reward, terminated, truncated, self._info = self._env.step(actions)
-        print("isaac_rover/skrl/envs/wrappers/torch/isaaclab_envs.py")
-        print(self.env.step)
-        print("isaac_rover/skrl/envs/wrappers/torch/isaaclab_envs.py")
+        # print("isaac_rover/skrl/envs/wrappers/torch/isaaclab_envs.py")
+        # print(self.env.step)
+        # print("isaac_rover/skrl/envs/wrappers/torch/isaaclab_envs.py")
         # 실행됨.
         return self._observations["policy"], reward.view(-1, 1), terminated.view(-1, 1), truncated.view(-1, 1), self._info
 

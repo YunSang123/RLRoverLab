@@ -48,6 +48,18 @@ def height_scan_rover(env: ManagerBasedRLEnv, sensor_cfg: SceneEntityCfg) -> tor
     # print("sensor.data.pos_w = ", sensor.data.pos_w)
     # print("sensor.data.ray_hits_w", sensor.data.ray_hits_w)
     # print("Height : ", sensor.data.pos_w[:, 2].unsqueeze(1) - sensor.data.ray_hits_w[..., 2] - 0.26878)
+    
+    ######################
+    # Debugging 중
+    # print("🚀 Debugging sensor.data...")
+    # print("sensor.data:", sensor.data)
+    # if sensor.data is not None:
+    #     print("sensor.data.pos_w:", getattr(sensor.data, "pos_w", "❌ None"))
+    #     print("sensor.data.ray_hits_w:", getattr(sensor.data, "ray_hits_w", "❌ None"))
+    # else:
+    #     print("❌ sensor.data is None!")
+    ######################
+    
     return sensor.data.pos_w[:, 2].unsqueeze(1) - sensor.data.ray_hits_w[..., 2] - 0.26878
 
 

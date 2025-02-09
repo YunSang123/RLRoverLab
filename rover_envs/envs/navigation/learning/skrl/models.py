@@ -107,15 +107,15 @@ class ConvHeightmapEncoder(nn.Module):
         for _ in encoder_features:
             # Conv2D 레이어를 거치면 아래와 같이 너비와 높이가 변함.
             w = (flatten_size[0] - kernel_size + 2 * padding) // stride + 1
-            print("w = ", w)
+            # print("w = ", w)
             h = (flatten_size[1] - kernel_size + 2 * padding) // stride + 1
-            print("h = ", h)
+            # print("h = ", h)
             
             # Conv2D 레이어를 거치면 아래와 같이 너비와 높이가 변함.
             w = (w - kernel_size + 2 * padding) // stride + 1
-            print("w = ", w)
+            # print("w = ", w)
             h = (h - kernel_size + 2 * padding) // stride + 1
-            print("h = ", h)
+            # print("h = ", h)
             
             # Max Pooling을 거치면 아래와 같이 너비와 높이가 변함!
             w = (w - 2) // 2 + 1
@@ -472,7 +472,7 @@ class GaussianNeuralNetworkConv(GaussianMixin, BaseModel):
         # Exteroception(60) + Proprioception(5)를 input으로 받음.
         # 65->256->160->128->2. 마지막 2는 action임. lin_vel, ang_vel
         for feature in mlp_layers:
-            print("feature : ",feature)
+            # print("feature : ",feature)
             self.mlp.append(nn.Linear(in_channels, feature))
             self.mlp.append(get_activation(mlp_activation))
             in_channels = feature

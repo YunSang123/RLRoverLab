@@ -49,7 +49,7 @@ class AckermannAction(ActionTerm):
         steering_order = cfg.steering_order
         drive_order = cfg.drive_order
         sorted_steering_joint_names = sorted(self._steering_joint_names, key=lambda x: steering_order.index(x[:2]))
-        print("\nisaac_rover/rover_envs/mdp/actions/ackermann_actions.py에서 실행"*10)
+        # print("\nisaac_rover/rover_envs/mdp/actions/ackermann_actions.py에서 실행"*10)
         print("self._drive_joint_names\n",self._drive_joint_names)
         sorted_drive_joint_names = sorted(self._drive_joint_names, key=lambda x: drive_order.index(x[:2]))
         original_steering_id_positions = {name: i for i, name in enumerate(self._steering_joint_names)}
@@ -91,9 +91,10 @@ class AckermannAction(ActionTerm):
         self._processed_actions = self.raw_actions * self._scale + self._offset
 
     def apply_actions(self):
-
         self._joint_pos, self._joint_vel = ackermann(
             self._processed_actions[:, 0], self._processed_actions[:, 1], self.cfg, self.device)
+        print(f"self._joint_pos = {self._joint_pos}")
+        print(f"self._joint_vel = {self._joint_vel}")
 
         self._asset.set_joint_velocity_target(self._joint_vel, joint_ids=self._drive_joint_ids)
         self._asset.set_joint_position_target(self._joint_pos, joint_ids=self._steering_joint_ids)
@@ -196,15 +197,24 @@ def ackermann(lin_vel, ang_vel, cfg, device):
         torch.Tensor: steering angles for the rover
         torch.Tensor: wheel velocities for the rover
     """
-
+    # print("lin_vel과 ang_vel 차례대로 출력")
+    # print(lin_vel)
+    # print(ang_vel)
+    # print("==================")
+    
     wheel_radius = cfg.wheel_radius  # wheel radius
     d_fr = cfg.rear_and_front_wheel_distance  # distance between front and rear wheels
     d_mw = cfg.middle_wheel_distance  # distance between middle wheels
     wl = cfg.wheelbase_length  # wheelbase length
     offset = cfg.offset
     # Checking the direction of the linear and angular velocities
+    print(f"lin_vel : {lin_vel}")
+    print(f"ang_vel : {ang_vel}")
     direction: torch.Tensor = torch.sign(lin_vel)
+    
     turn_direction: torch.Tensor = torch.sign(ang_vel)
+    print(f"direction : {direction}")
+    print(f"turn_direction : {turn_direction}")
 
     direction = torch.where(direction == 0, direction+1, direction)
 
@@ -277,6 +287,7 @@ def ackermann(lin_vel, ang_vel, cfg, device):
     steering_angles = torch.stack([theta_FL, theta_FR, theta_RL, theta_RR], dim=1)
     # Convert wheel velocities from m/s to rad/s
     wheel_velocities = wheel_velocities / (wheel_radius*2)
-
+    # Print steering_angles and wheel_velocitie
+    
     return steering_angles, wheel_velocities
 

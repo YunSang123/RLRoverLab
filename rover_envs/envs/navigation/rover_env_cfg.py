@@ -79,15 +79,15 @@ class RoverSceneCfg(MarsTerrainSceneCfg):
     #     prim_path="{ENV_REGEX_NS}/Robot")
 
     contact_sensor = ContactSensorCfg(
-        prim_path="{ENV_REGEX_NS}/Robot/.*_(Drive|Steer|Boogie|Body)",
+        prim_path="{ENV_REGEX_NS}/rover/.*(base_footprint)",
         filter_prim_paths_expr=["/World/terrain/obstacles/obstacles"],
         # filter_prim_paths_expr=["/World/terrain/obstacles/obstacles"],
     )
     # contact_sensor = None
 
     dense_height_scanner = RayCasterCfg(
-        prim_path="{ENV_REGEX_NS}/Robot/Body",
-        offset=RayCasterCfg.OffsetCfg(pos=[0.0, 0.0, 10.0]),
+        prim_path="{ENV_REGEX_NS}/rover/base_footprint",
+        offset=RayCasterCfg.OffsetCfg(pos=[0.0, 0.0, 40.0]),
         attach_yaw_only=True,
         pattern_cfg=patterns.GridPatternCfg(resolution=0.05, size=[3.0, 3.0]),
         debug_vis=True,
@@ -96,8 +96,8 @@ class RoverSceneCfg(MarsTerrainSceneCfg):
         max_distance=100.0,
     )
     sparse_height_scanner = RayCasterCfg(
-        prim_path="{ENV_REGEX_NS}/Robot/Body",
-        offset=RayCasterCfg.OffsetCfg(pos=[0.0, 0.0, 8.0]),
+        prim_path="{ENV_REGEX_NS}/rover/base_footprint",
+        offset=RayCasterCfg.OffsetCfg(pos=[0.0, 0.0, 30.0]),
         attach_yaw_only=True,
         pattern_cfg=patterns.GridPatternCfg(resolution=0.15, size=[4.5, 4.5]),
         debug_vis=True,
@@ -304,7 +304,7 @@ class RoverEnvCfg(ManagerBasedRLEnvCfg):
         self.sim.dt = 1 / 60.0
         self.decimation = 6
         self.episode_length_s = 150
-        self.viewer.eye = (-6.0, -6.0, 3.5)
+        self.viewer.eye = (-3.0, -3.0, 3.5)
 
         # update sensor periods
         if self.scene.dense_height_scanner is not None:

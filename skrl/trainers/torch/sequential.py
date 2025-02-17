@@ -80,6 +80,7 @@ class SequentialTrainer(Trainer):
         if self.num_simultaneous_agents == 1:
             # single-agent
             if self.env.num_agents == 1:
+                # 실제로 실행되는 함수
                 self.single_agent_train()
             # multi-agent
             else:
@@ -219,3 +220,14 @@ class SequentialTrainer(Trainer):
                     states, infos = self.env.reset()
                 else:
                     states = next_states
+    
+    def record(self) -> None:
+        if self.num_simultaneous_agents == 1:
+            # single-agent
+            if self.env.num_agents == 1:
+                # 실제로 실행되는 함수
+                self.single_agent_record()
+            # multi-agent
+            else:
+                pass
+            return

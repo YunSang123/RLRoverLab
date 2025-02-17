@@ -298,6 +298,7 @@ class Agent:
         :type timesteps: int
         """
         if self.write_interval > 0:
+            print(f"self.write_interval : {self.write_interval}")
             # compute the cumulative sum of the rewards and timesteps
             if self._cumulative_rewards is None:
                 self._cumulative_rewards = torch.zeros_like(rewards, dtype=torch.float32)

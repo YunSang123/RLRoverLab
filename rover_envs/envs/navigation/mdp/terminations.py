@@ -27,8 +27,6 @@ def is_success(env: ManagerBasedRLEnv, command_name: str, threshold: float) -> t
 
     # Calculating the distance and determining if the target is reached
     distance = torch.norm(target_position, p=2, dim=-1)
-    if (distance < threshold) & (torch.abs(angle) < 0.1):
-        print("Navigation task successed!")
         
     return torch.where((distance < threshold) & (torch.abs(angle) < 0.1), True, False)
     # return torch.where(distance < threshold, True, False)

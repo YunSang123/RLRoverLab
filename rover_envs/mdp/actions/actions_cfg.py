@@ -28,6 +28,11 @@ class AckermannActionCfg(ActionTermCfg):
 
     middle_wheel_distance: float = MISSING
     """The distance between the middle wheels."""
+    
+    d1: float = MISSING
+    d2: float = MISSING
+    d3: float = MISSING
+    d4: float = MISSING
 
     rear_and_front_wheel_distance: float = MISSING
     """The distance between the rear and front wheels."""
@@ -37,6 +42,8 @@ class AckermannActionCfg(ActionTermCfg):
 
     min_steering_radius: float = MISSING
     """The minimum steering angle of the vehicle, if lower than this value, the vehicle will turn on the spot."""
+    
+    max_steering_radius: float = MISSING
 
     steering_joint_names: list[str] = MISSING
 

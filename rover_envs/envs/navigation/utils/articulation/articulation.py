@@ -29,10 +29,10 @@ class RoverArticulation(Articulation):
             
             contact_api: PhysxSchema.PhysxContactReportAPI = \
                 PhysxSchema.PhysxContactReportAPI.Get(stage, prim)
-            if contact_api:
-                print(f"✅ {prim_path} has Contact Reporter API.")
-            else:
-                print(f"❌ {prim_path} does NOT have Contact Reporter API!")
+            # if contact_api:
+            #     print(f"✅ {prim_path} has Contact Reporter API.")
+            # else:
+            #     print(f"❌ {prim_path} does NOT have Contact Reporter API!")
             contact_api.CreateReportPairsRel().AddTarget("/World/terrain/obstacles/obstacles")
 
 

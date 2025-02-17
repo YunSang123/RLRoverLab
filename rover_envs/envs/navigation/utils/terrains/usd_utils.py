@@ -62,7 +62,7 @@ def trimesh_to_usd(vertices: np.ndarray, faces: np.ndarray, position=None, orien
 
 
 def add_material_to_stage_from_mdl():
-    안쓰임
+    print("rover_envs/envs/navigation/utils/terrains/usd_utils.py의 add_material_to_stage_from_mdl 함수가 쓰임!"*10)
     # stage: Usd.Stage = get_current_stage()
 
     import omni.kit.commands

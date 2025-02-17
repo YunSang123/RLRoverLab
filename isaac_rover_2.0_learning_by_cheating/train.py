@@ -109,8 +109,8 @@ class Trainer():
         return total_loss, total_be_loss, total_re_loss, total_loss_benchmark
 
     def train(self):
-        wandb.init(project='isaac-rover-2.0-learning-by-cheating', sync_tensorboard=True,name=self.wandb_name,group=self.wandb_group, entity="aalborg-university")
-        train_ds = TeacherDataset("data/")
+        wandb.init(project='isaac-rover-2.0-learning-by-cheating', sync_tensorboard=True,name=self.wandb_name,group=self.wandb_group, entity="inside-out-anger-jys-inha-university")
+        train_ds = TeacherDataset("teacher_model/")
         train_loader = DataLoader(train_ds,batch_size=self.BATCH_SIZE,num_workers=1,pin_memory=True, shuffle=False)
         
         model = Student(info=train_ds.get_info(), cfg=self.cfg, teacher="teacher_model/agent_219000.pt").to(self.DEVICE)
@@ -228,7 +228,7 @@ def train():
         #wandb_group = "test-group"
         wandb_name = f"test7"
 
-        wandb.init(project='isaac-rover-2.0-learning-by-cheating', sync_tensorboard=True, name=wandb_name, group=wandb_group, entity="aalborg-university")
+        wandb.init(project='isaac-rover-2.0-learning-by-cheating', sync_tensorboard=True, name=wandb_name, group=wandb_group, entity="inside-out-anger-jys-inha-university")
         cfg = cfg_fn()
         sweep=False
         if sweep:

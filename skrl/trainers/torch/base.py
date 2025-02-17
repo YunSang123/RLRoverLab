@@ -150,6 +150,7 @@ class Trainer:
         """
         raise NotImplementedError
 
+    # 실제로 실행되는 함수
     def single_agent_train(self) -> None:
         """Train agent
 
@@ -175,11 +176,94 @@ class Trainer:
 
             # pre-interaction
             """
+            - 실제로 실행되는 함수임.
             - 에이전트가 상호작용 전에 준비 작업을 수행
             """
             self.agents.pre_interaction(timestep=timestep, timesteps=self.timesteps)
 
             # compute actions
+            # with torch.no_grad() = 그래디언트 계산을 비활성화하는 것임.
+            with torch.no_grad():
+                actions = self.agents.act(states, timestep=timestep, timesteps=self.timesteps)[0]
+                # print("actions\n", actions)
+                # print("states\n", states)
+                
+                # 상태 저장
+                # self.state_history.append(states.clone())  # clone() 사용해 복사본 저장
+                
+                # print("isaac_rover/skrl/trainers/torch/base.py")
+                # print(type(self.env))  # 현재 self.env가 어떤 클래스의 인스턴스인지 확인
+                # print(self.env.__class__.__mro__)  # 클래스의 상속 계층 구조 확인
+                # print("isaac_rover/skrl/trainers/torch/base.py")
+                
+                # step the environments
+                next_states, rewards, terminated, truncated, infos = self.env.step(actions)
+
+                # render scene
+                if not self.headless:
+                    self.env.render()
+
+                # record the environments' transitions
+                self.agents.record_transition(states=states,
+                                              actions=actions,
+                                              rewards=rewards,
+                                              next_states=next_states,
+                                              terminated=terminated,
+                                              truncated=truncated,
+                                              infos=infos,
+                                              timestep=timestep,
+                                              timesteps=self.timesteps)
+
+                # log environment info
+                if self.environment_info in infos:
+                    for k, v in infos[self.environment_info].items():
+                        if isinstance(v, torch.Tensor) and v.numel() == 1:
+                            self.agents.track_data(f"Info / {k}", v.item())
+
+            # post-interaction
+            self.agents.post_interaction(timestep=timestep, timesteps=self.timesteps)
+
+            # reset environments
+            if self.env.num_envs > 1:
+                states = next_states
+            else:
+                if terminated.any() or truncated.any():
+                    with torch.no_grad():
+                        states, infos = self.env.reset()
+                else:
+                    states = next_states
+        # torch.save(self.state_history, "state_history.pth")  # PyTorch 텐서를 저장
+    
+    def single_agent_record(self) -> None:
+        """Record agent
+
+        This method executes the following steps in loop:
+
+        - Pre-interaction
+        - Compute actions
+        - Interact with the environments
+        - Render scene
+        - Record transitions
+        - Post-interaction
+        - Reset environments
+        """
+        assert self.num_simultaneous_agents == 1, "This method is not allowed for simultaneous agents"
+        assert self.env.num_agents == 1, "This method is not allowed for multi-agents"
+
+        # reset env
+        states, infos = self.env.reset()
+
+        for timestep in tqdm.tqdm(range(self.initial_timestep, self.timesteps), disable=self.disable_progressbar, file=sys.stdout):
+
+            # pre-interaction
+            """
+            - 실제로 실행되는 함수임.
+            - 에이전트가 상호작용 전에 준비 작업을 수행
+            """
+            self.agents.pre_interaction(timestep=timestep, timesteps=self.timesteps)
+
+            # compute actions
+            # with torch.no_grad() = 그래디언트 계산을 비활성화하는 것임.
             with torch.no_grad():
                 actions = self.agents.act(states, timestep=timestep, timesteps=self.timesteps)[0]
                 # print("actions\n", actions)
@@ -241,13 +325,19 @@ class Trainer:
         - Render scene
         - Reset environments
         """
+        print("assert 실행하기 전!\n"*10)
+        
         assert self.num_simultaneous_agents == 1, "This method is not allowed for simultaneous agents"
         assert self.env.num_agents == 1, "This method is not allowed for multi-agents"
 
+        print("single_agent_eval에서 self.env.reset() 실행되기 전!")
         # reset env
         states, infos = self.env.reset()
+        print("single_agent_eval에서 self.env.reset() 실행된 후!")
 
         for timestep in tqdm.tqdm(range(self.initial_timestep, self.timesteps), disable=self.disable_progressbar, file=sys.stdout):
+            
+            print("skrl/trainers/torch/base.py에서 실행중\n"*10)
 
             # compute actions
             with torch.no_grad():

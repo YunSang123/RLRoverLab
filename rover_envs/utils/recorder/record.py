@@ -16,13 +16,14 @@ parser = argparse.ArgumentParser("Welcome to Orbit: Omniverse Robotics Environme
 parser.add_argument("--load", action="store_true", default=False, help="Load previous trained agent.pt")
 parser.add_argument("--headless", action="store_true", default=True, help="Force display off at all times.")           # GUI 없이 실행
 parser.add_argument("--video", action="store_true", default=False, help="Record videos during training.")               # 학습 중 비디오 녹화 여부
-parser.add_argument("--video_length", type=int, default=750, help="Length of the recorded video (in steps).")           # 비디오 길이 설정.
-parser.add_argument("--video_interval", type=int, default=100, help="Interval between video recordings (in steps).")   # 비디오 녹화 간격.
+parser.add_argument("--video_length", type=int, default=1000, help="Length of the recorded video (in steps).")           # 비디오 길이 설정.
+parser.add_argument("--video_interval", type=int, default=2000, help="Interval between video recordings (in steps).")   # 비디오 녹화 간격.
 parser.add_argument("--cpu", action="store_true", default=False, help="Use CPU pipeline.")                              # CPU 모드에서 실행 여부.
-parser.add_argument("--num_envs", type=int, default=512, help="Number of environments to simulate.")                      # 시뮬레이션 환경 개수
+parser.add_argument("--num_envs", type=int, default=128, help="Number of environments to simulate.")                      # 시뮬레이션 환경 개수
 parser.add_argument("--task", type=str, default="AAURoverEnv-v0", help="Name of the task.")                             # 수행할 환경 이름
 parser.add_argument("--seed", type=int, default=None, help="Seed used for the environment")                             # 난수 생성 시드
 parser.add_argument("--agent", type=str, default="PPO", help="Name of the agent.")                                      # 사용할 에이전트 알고리즘
+parser.add_argument("timesteps", type=int, default=1500, help="")
 args_cli = parser.parse_args()
 
 # 명령줄 인자 정보 출력 및 확인
@@ -184,7 +185,7 @@ spec.loader.exec_module(skrl)
 
 from skrl.trainers.torch import SequentialTrainer
 
-def train():
+def record():
     
     # Seed 설정
     # Seed 값이 제공되었으면 해당 값을 Seed로 사용하고 제공되지 않았으면 0부터 100,000,000 사이의 랜덤 값을 생성해 시드로 사용
@@ -248,11 +249,11 @@ def train():
         print("Train new model!")
     
     trainer = SequentialTrainer(cfg=trainer_cfg, agents=agent, env=env)
-    trainer.train()
+    trainer.record()
 
     env.close()
     simulation_app.close()
 
 
 if __name__ == "__main__":
-    train()
+    record()

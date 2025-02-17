@@ -84,6 +84,13 @@ def load_omniverse_isaacgym_env(task_name: str = "",
     :rtype: omni.isaac.gym.vec_env.vec_env_base.VecEnvBase or omni.isaac.gym.vec_env.vec_env_mt.VecEnvMT
     """
     import omegaconf
+    
+    # 모듈이 있는 경로 추가
+    module_path = "/workspace/isaac_rover/isaac_rover_2.0"
+    if module_path not in sys.path:
+        sys.path.append(module_path)
+    
+    
     import omniisaacgymenvs  # type: ignore
     from hydra._internal.hydra import Hydra
     from hydra._internal.utils import create_automatic_config_search_path, get_args_parser
@@ -268,9 +275,11 @@ def load_omniverse_isaacgym_env(task_name: str = "",
                                       sim_device=config.device_id,
                                       enable_livestream=config.enable_livestream,
                                       enable_viewport=enable_viewport)
+            print("try가 됨!\n"*50)
         except (TypeError, omegaconf.errors.ConfigAttributeError):
             logger.warning("Using an older version of Isaac Sim or OmniIsaacGymEnvs (2022.2.0 or earlier)")
             env = _OmniIsaacGymVecEnv(headless=config.headless)  # Isaac Sim 2022.2.0 and earlier
+            print("except이 실행됨!\n"*50)
         task = initialize_task(cfg, env, init_sim=True)
 
     return env

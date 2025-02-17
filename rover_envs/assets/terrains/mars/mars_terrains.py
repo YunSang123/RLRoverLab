@@ -22,7 +22,8 @@ class MarsTerrainSceneCfg(InteractiveSceneCfg):
     # Hidden Terrain (merged terrain of ground and obstacles) for raycaster.
     # This is done because the raycaster doesn't work with multiple meshes
     
-    
+    ###############################
+    # 
     
     hidden_terrain = AssetBaseCfg(
         prim_path="/World/terrain/hidden_terrain",
@@ -30,7 +31,7 @@ class MarsTerrainSceneCfg(InteractiveSceneCfg):
             visible=False,
             usd_path=os.path.join(
                 os.path.dirname(os.path.abspath(__file__)),
-                "terrain1",
+                "debug1",               # terrain1이 원본!
                 "terrain_merged.usd",
             ),
         ),
@@ -45,7 +46,7 @@ class MarsTerrainSceneCfg(InteractiveSceneCfg):
         collision_group=-1,
         usd_path=os.path.join(
             os.path.dirname(os.path.abspath(__file__)),
-            "terrain1",
+            "debug1",                 # terrain1이 원본!
             "terrain_only.usd",
         ),
     )
@@ -57,7 +58,7 @@ class MarsTerrainSceneCfg(InteractiveSceneCfg):
             visible=True,
             usd_path=os.path.join(
                 os.path.dirname(os.path.abspath(__file__)),
-                "terrain1",
+                "debug1",             # terrain1이 원본!
                 "rocks_merged.usd",
             ),
         ),

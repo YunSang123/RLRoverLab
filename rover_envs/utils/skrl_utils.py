@@ -186,6 +186,8 @@ class SkrlSequentialLogTrainer(Trainer):
         * Record the environments' transitions: Record the transitions from the environments.
         * Log custom environment data: Log custom environment data.
         """
+        print(f"self.env.num_agents : {self.env.num_agents}\n"*10)
+        
         # set running mode
         if self.env.num_agents > 1:
             for agent in self.agents:
@@ -194,7 +196,9 @@ class SkrlSequentialLogTrainer(Trainer):
             self.agents.set_running_mode("eval")
         # single agent
         if self.env.num_agents == 1:
+            print("실행전!\n"*10)
             self.single_agent_eval()
+            print("실행후!\n"*10)
             return
 
         # reset env
@@ -202,6 +206,7 @@ class SkrlSequentialLogTrainer(Trainer):
         # evaluation loop
         for timestep in tqdm.tqdm(range(self.initial_timestep, self.timesteps), disable=self.disable_progressbar):
             # compute actions
+            print("rover_envs/utils/skrl_utils.py의 SkrlSequentialLogTrainer가 실행됨.\n"*10)
             with torch.no_grad():
                 actions = torch.vstack([
                     agent.act(states[scope[0]: scope[1]], timestep=timestep, timesteps=self.timesteps)[0]

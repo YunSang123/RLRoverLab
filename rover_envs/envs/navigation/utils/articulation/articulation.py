@@ -12,7 +12,7 @@ class RoverArticulation(Articulation):
 
     def prepare_contact_sensors(self):
         stage = get_current_stage()
-        pattern = "/World/envs/env_.*/rover/.*(base_footprint)"
+        pattern = "/World/envs/env_.*/rover/.*(base_footprint|bogie|wheel_link_L|wheel_link_R)"
         matching_prims = []
         prim: Usd.Prim
         for prim in stage.Traverse():

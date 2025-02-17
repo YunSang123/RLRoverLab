@@ -79,7 +79,7 @@ class RoverSceneCfg(MarsTerrainSceneCfg):
     #     prim_path="{ENV_REGEX_NS}/Robot")
 
     contact_sensor = ContactSensorCfg(
-        prim_path="{ENV_REGEX_NS}/rover/.*(base_footprint)",
+        prim_path="{ENV_REGEX_NS}/rover/.*(base_footprint|bogie|wheel_link_L|wheel_link_R)",
         filter_prim_paths_expr=["/World/terrain/obstacles/obstacles"],
         # filter_prim_paths_expr=["/World/terrain/obstacles/obstacles"],
     )

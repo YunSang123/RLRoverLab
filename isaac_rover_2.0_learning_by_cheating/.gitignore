@@ -1,0 +1,16 @@
+data/0.pt
+data/1.pt
+data/2.pt
+data/3.pt
+data/data.pt
+wandb
+runs
+data
+__pycache__/
+data.zip
+.fr-jR4ym2/zieIbEPi
+l.py
+mydir.zip
+*.pt
+removed_files/
+model_backup.py

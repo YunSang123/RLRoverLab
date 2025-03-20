@@ -1,7 +1,7 @@
 from dataclasses import MISSING
 
-from omni.isaac.lab.managers.action_manager import ActionTerm, ActionTermCfg
-from omni.isaac.lab.utils import configclass
+from isaaclab.managers.action_manager import ActionTerm, ActionTermCfg
+from isaaclab.utils import configclass
 
 from . import ackermann_actions
 
@@ -23,10 +23,10 @@ class AckermannActionCfg(ActionTermCfg):
     offset: tuple[float, float] = 0.0
     """The offset of the action term."""
 
-    wheelbase_length: float = MISSING
+    # wheelbase_length: float = MISSING
     """The distance between the front and rear wheels."""
 
-    middle_wheel_distance: float = MISSING
+    # middle_wheel_distance: float = MISSING
     """The distance between the middle wheels."""
     
     d1: float = MISSING
@@ -34,7 +34,7 @@ class AckermannActionCfg(ActionTermCfg):
     d3: float = MISSING
     d4: float = MISSING
 
-    rear_and_front_wheel_distance: float = MISSING
+    # rear_and_front_wheel_distance: float = MISSING
     """The distance between the rear and front wheels."""
 
     wheel_radius: float = MISSING

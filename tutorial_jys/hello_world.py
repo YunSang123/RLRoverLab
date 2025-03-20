@@ -6,7 +6,7 @@ from datetime import datetime
 
 import carb                                     # Omniverse 관련 설정을 제어하는 API
 import gymnasium as gym                         # 강화학습환경을 제공하는 라이브러리
-from omni.isaac.lab.app import AppLauncher      # Omniverse Isaac Sim을 실행하는 데 필요한 클래스
+from isaaclab.app import AppLauncher      # Omniverse Isaac Sim을 실행하는 데 필요한 클래스
 
 # add argparse arguments
 parser = argparse.ArgumentParser("Welcome to Orbit: Omniverse Robotics Environments!")
@@ -51,9 +51,9 @@ carb_settings.set_int(
 )
 
 # Utility Imports
-from omni.isaac.lab.envs import ManagerBasedRLEnv  # noqa: E402
-from omni.isaac.lab.utils.dict import print_dict  # noqa: E402
-from omni.isaac.lab.utils.io import dump_pickle, dump_yaml  # noqa: E402
+from isaaclab.envs import ManagerBasedRLEnv  # noqa: E402
+from isaaclab.utils.dict import print_dict  # noqa: E402
+from isaaclab.utils.io import dump_pickle, dump_yaml  # noqa: E402
 
 # Logging setup
 # 실험 로그를 설정 및 저장

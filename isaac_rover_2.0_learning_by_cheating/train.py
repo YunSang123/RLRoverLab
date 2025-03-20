@@ -40,8 +40,6 @@ class Trainer():
         #print(1)
         for batch_idx, (data, targets_ac, targets_ex) in enumerate(loop):
 
-
-
             #print("hej")
             data = data.to(device=self.DEVICE)
             h = model.belief_encoder.init_hidden(self.BATCH_SIZE).to(self.DEVICE)

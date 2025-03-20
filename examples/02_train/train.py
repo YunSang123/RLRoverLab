@@ -9,13 +9,13 @@ import torch
 
 import carb                                     # Omniverse 관련 설정을 제어하는 API
 import gymnasium as gym                         # 강화학습환경을 제공하는 라이브러리
-from omni.isaac.lab.app import AppLauncher      # Omniverse Isaac Sim을 실행하는 데 필요한 클래스
+from isaaclab.app import AppLauncher      # Omniverse Isaac Sim을 실행하는 데 필요한 클래스
 
 # add argparse arguments
 parser = argparse.ArgumentParser("Welcome to Orbit: Omniverse Robotics Environments!")
 parser.add_argument("--load", action="store_true", default=False, help="Load previous trained agent.pt")
 parser.add_argument("--headless", action="store_true", default=False, help="Force display off at all times.")           # GUI 없이 실행
-parser.add_argument("--video", action="store_true", default=True, help="Record videos during training.")               # 학습 중 비디오 녹화 여부
+parser.add_argument("--video", action="store_true", default=False, help="Record videos during training.")               # 학습 중 비디오 녹화 여부
 parser.add_argument("--video_length", type=int, default=2000, help="Length of the recorded video (in steps).")           # 비디오 길이 설정.
 parser.add_argument("--video_interval", type=int, default=2000, help="Interval between video recordings (in steps).")   # 비디오 녹화 간격.
 parser.add_argument("--cpu", action="store_true", default=False, help="Use CPU pipeline.")                              # CPU 모드에서 실행 여부.
@@ -31,17 +31,17 @@ print(type(args_cli))
 print("=======")
 
 # launch the simulator
-config = {"headless": args_cli.headless}
+
 # load cheaper kit config in headless
 if args_cli.headless:   # GUI 없이 실행
-    app_experience = f"{os.environ['EXP_PATH']}/omni.isaac.sim.python.gym.headless.kit"
+    app_experience = f"/workspace/isaac_lab/apps/isaaclab.python.headless.kit"
 else:                   # GUI 실행
-    app_experience = f"{os.environ['EXP_PATH']}/omni.isaac.sim.python.kit"
+    app_experience = f"/workspace/isaac_lab/apps/isaaclab.python.kit"
 
 # AppLauncher : Omniverse 앱 실행. args_cli의 인자를 전달
 
 app_launcher = AppLauncher(launcher_args=args_cli, experience=app_experience)
-from omni.isaac.lab_tasks.utils.wrappers.skrl import SkrlVecEnvWrapper, process_skrl_cfg
+from isaaclab_rl.skrl import SkrlVecEnvWrapper
 simulation_app = app_launcher.app
 
 # RTX GPU를 사용할 때 최적화를 위해 Ray Tracing 및 메모리 설정을 조정.
@@ -56,9 +56,9 @@ carb_settings.set_int(
 )
 
 # Utility Imports
-from omni.isaac.lab.envs import ManagerBasedRLEnv  # noqa: E402
-from omni.isaac.lab.utils.dict import print_dict  # noqa: E402
-from omni.isaac.lab.utils.io import dump_pickle, dump_yaml  # noqa: E40
+from isaaclab.envs import ManagerBasedRLEnv  # noqa: E402
+from isaaclab.utils.dict import print_dict  # noqa: E402
+from isaaclab.utils.io import dump_pickle, dump_yaml  # noqa: E40
 # Logging setup
 # 실험 로그를 설정 및 저장
 # 로그 디렉토리를 생성하고 환경 및 에이전트 설정을 YAML/Pickle 파일로 저장
@@ -127,7 +127,7 @@ def video_record(env: ManagerBasedRLEnv, log_dir: str, video: bool, video_length
 
     return env
 
-from omni.isaac.lab_tasks.utils import parse_env_cfg  # 환경 설정 파일을 파싱
+from isaaclab_tasks.utils import parse_env_cfg  # 환경 설정 파일을 파싱
 from skrl.utils import set_seed  # 난수 생성 시드 설정
 
 import rover_envs.envs.navigation.robots  # noqa: E402, F401
@@ -239,7 +239,7 @@ def train():
     #######################
     if args_cli.load:   # 기존 model을 이어서 학습
         print("Load previous model and train it!")
-        checkpoint_path = "./load/osr_t20k.pt"
+        checkpoint_path = "./load/agent_11200.pt"
         checkpoint = torch.load(checkpoint_path)
         agent.policy.load_state_dict(checkpoint["policy"])
         agent.value.load_state_dict(checkpoint["value"])

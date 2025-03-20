@@ -6,7 +6,7 @@ import traceback
 import carb
 import gymnasium as gym
 import torch
-from omni.isaac.lab.app import AppLauncher
+from isaaclab.app import AppLauncher
 
 parser = argparse.ArgumentParser(description="Empty Scene")
 

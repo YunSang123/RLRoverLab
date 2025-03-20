@@ -1,7 +1,7 @@
 import re
 
-from omni.isaac.core.utils.stage import get_current_stage
-from omni.isaac.lab.assets import Articulation
+from isaacsim.core.utils.stage import get_current_stage
+from isaaclab.assets import Articulation
 from pxr import PhysxSchema, Sdf, Usd, UsdGeom, UsdPhysics
 
 

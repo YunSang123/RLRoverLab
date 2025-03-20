@@ -130,7 +130,7 @@ def load_isaaclab_env(task_name: str = "",
     parser.add_argument("--distributed", action="store_true", default=False, help="Run training with multiple GPUs or nodes.")
 
     # launch the simulation app
-    from omni.isaac.lab.app import AppLauncher
+    from isaaclab.app import AppLauncher
 
     AppLauncher.add_app_launcher_args(parser)
     args = parser.parse_args()

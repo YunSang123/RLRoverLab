@@ -10,12 +10,12 @@ from isaaclab.app import AppLauncher
 
 # add argparse arguments
 parser = argparse.ArgumentParser("Welcome to Orbit: Omniverse Robotics Environments!")
-parser.add_argument("--headless", action="store_true", default=False, help="Force display off at all times.")
+parser.add_argument("--headless", action="store_true", default=True, help="Force display off at all times.")
 parser.add_argument("--video", action="store_true", default=False, help="Record videos during training.")
 parser.add_argument("--video_length", type=int, default=1000, help="Length of the recorded video (in steps).")
 parser.add_argument("--video_interval", type=int, default=100, help="Interval between video recordings (in steps).")
 parser.add_argument("--cpu", action="store_true", default=False, help="Use CPU pipeline.")
-parser.add_argument("--num_envs", type=int, default=1, help="Number of environments to simulate.")
+parser.add_argument("--num_envs", type=int, default=512, help="Number of environments to simulate.")
 parser.add_argument("--task", type=str, default="AAURoverEnv-v0", help="Name of the task.")
 parser.add_argument("--seed", type=int, default=None, help="Seed used for the environment")
 parser.add_argument("--agent", type=str, default="PPO", help="Name of the agent.")
@@ -151,7 +151,7 @@ def main():
     print(f"num_actinos = {num_actions}")
 
     trainer_cfg = experiment_cfg["trainer"]
-    trainer_cfg["timesteps"] = 10000
+    trainer_cfg["timesteps"] = 100
 
     agent = get_agent(args_cli.agent, env, observation_space, action_space, experiment_cfg, conv=True)
     # Get the checkpoint path from the experiment configuration
@@ -250,7 +250,7 @@ def main():
     print(trainer_cfg)
 
     trainer = SkrlSequentialLogTrainer(cfg=trainer_cfg, agents=agent, env=env)
-    trainer.eval()
+    trainer.record()
     ########################################
     
 

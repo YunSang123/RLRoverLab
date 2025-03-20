@@ -19,7 +19,7 @@ skip_glob = ["logs/*","data/*", "_isaac_sim/*"]
 # Known third party packages with known types
 
 known_third_party = [
-    "omni.isaac.core",
+    "isaacsim.core",
     "omni.replicator.isaac",
     "omni.replicator.core",
     "pxr",

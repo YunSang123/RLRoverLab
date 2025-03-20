@@ -2,9 +2,9 @@
 from typing import TYPE_CHECKING  # noqa: F401
 
 import torch
-from omni.isaac.lab.assets import RigidObject
-from omni.isaac.lab.envs import ManagerBasedEnv
-from omni.isaac.lab.managers import SceneEntityCfg
+from isaaclab.assets import RigidObject
+from isaaclab.envs import ManagerBasedEnv
+from isaaclab.managers import SceneEntityCfg
 
 from ..utils.terrains.terrain_importer import RoverTerrainImporter
 
@@ -28,7 +28,7 @@ def reset_root_state_rover(env: ManagerBasedEnv, env_ids: torch.Tensor, asset_cf
     positions = spawn_locations
     # positions[:, 0] = 48
     # positions[:, 1] = 13
-    positions[:, 2] += z_offset
+    positions[:, 2] += z_offset/2
     # print(f"positions = {positions}\n"*5)
 
     # Random angle

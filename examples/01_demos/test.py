@@ -1,5 +1,5 @@
 import pickle
-# import omni.isaac.core
+# import isaacsim.core
 
 with open('env.pkl', 'rb') as f:
     data = pickle.load(f)

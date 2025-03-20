@@ -6,7 +6,7 @@ from typing import TYPE_CHECKING
 
 import carb
 import torch
-from omni.isaac.lab.app import AppLauncher
+from isaaclab.app import AppLauncher
 
 parser = argparse.ArgumentParser(description="Empty Scene")
 
@@ -17,11 +17,11 @@ args_cli = parser.parse_args()
 app_launcher = AppLauncher(args_cli)
 simulation_app = app_launcher.app
 
-import omni.isaac.lab.sim as sim_utils  # noqa: F401, E402
-from omni.isaac.lab.assets import Articulation, ArticulationCfg, AssetBaseCfg  # noqa: F401, E402
-from omni.isaac.lab.scene import InteractiveScene, InteractiveSceneCfg  # noqa: F401, E402
-from omni.isaac.lab.sim import SimulationContext  # noqa: F401, E402
-from omni.isaac.lab.utils import configclass  # noqa: F401, E402
+import isaaclab.sim as sim_utils  # noqa: F401, E402
+from isaaclab.assets import Articulation, ArticulationCfg, AssetBaseCfg  # noqa: F401, E402
+from isaaclab.scene import InteractiveScene, InteractiveSceneCfg  # noqa: F401, E402
+from isaaclab.sim import SimulationContext  # noqa: F401, E402
+from isaaclab.utils import configclass  # noqa: F401, E402
 
 # Avoid Circular Import
 from rover_envs.assets.robots.aau_rover_simple import AAU_ROVER_SIMPLE_CFG  # noqa: F401, E402

@@ -3,13 +3,13 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 
 import torch
-from omni.isaac.lab.managers import SceneEntityCfg
-from omni.isaac.lab.sensors import RayCaster
+from isaaclab.managers import SceneEntityCfg
+from isaaclab.sensors import RayCaster
 
-# from omni.isaac.lab.command_generators import UniformPoseCommandGenerator
+# from isaaclab.command_generators import UniformPoseCommandGenerator
 
 if TYPE_CHECKING:
-    from omni.isaac.lab.envs import ManagerBasedRLEnv
+    from isaaclab.envs import ManagerBasedRLEnv
 
 
 def angle_to_target_observation(env: ManagerBasedRLEnv, command_name: str) -> torch.Tensor:
@@ -60,11 +60,34 @@ def height_scan_rover(env: ManagerBasedRLEnv, sensor_cfg: SceneEntityCfg) -> tor
     #     print("❌ sensor.data is None!")
     ######################
     # print(f"sensor.data : {sensor.data}")
+    
+    sensor.data.ray_hits_w = torch.nan_to_num(sensor.data.ray_hits_w, posinf=5.0, neginf=-5.0)
+    
+    pos_has_nan = torch.isnan(sensor.data.pos_w).any().item()
+    pos_has_inf = torch.isinf(sensor.data.pos_w).any().item()
+    ray_has_nan = torch.isnan(sensor.data.ray_hits_w).any().item()
+    ray_has_inf = torch.isinf(sensor.data.ray_hits_w).any().item()
+    
+    
+    if pos_has_nan == True:
+        print("observations.py에서 실행!")
+        print(f"position has nan value")
+    if pos_has_inf == True:
+        print("observations.py에서 실행!")
+        print(f"position has inf value")
+    if ray_has_nan == True:
+        print("observations.py에서 실행!")
+        print(f"ray_hit has nan value")
+    if ray_has_inf == True:
+        print("observations.py에서 실행!")
+        print(f"ray_hit has inf value")
+    
     a = sensor.data.pos_w[:, 2].unsqueeze(1) - sensor.data.ray_hits_w[..., 2] - 0.26878
     # print("========================================================================")
     # print(f"sensor_data = {a}")
     # print(f"shape = {a.shape}")
     # print(f"type = {type(a)}")
+    
     return sensor.data.pos_w[:, 2].unsqueeze(1) - sensor.data.ray_hits_w[..., 2] - 0.26878
 
 

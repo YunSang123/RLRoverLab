@@ -43,6 +43,7 @@ print(f"key = {key}")
 print(f"value = {value}")
 print(f"len = {value.shape}")
 action = model.compute(states)
+# print(f"isaac_rover/physical_rover/load_osr_policy.py\n"*100)
 print(action)
 
 mean_actions, log_std, outputs = model.compute(states)

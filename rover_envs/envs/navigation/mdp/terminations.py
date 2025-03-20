@@ -3,12 +3,12 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 
 import torch
-# Importing necessary modules from the omni.isaac.lab package
-from omni.isaac.lab.managers import SceneEntityCfg
-from omni.isaac.lab.sensors import ContactSensor
+# Importing necessary modules from the isaaclab package
+from isaaclab.managers import SceneEntityCfg
+from isaaclab.sensors import ContactSensor
 
 if TYPE_CHECKING:
-    from omni.isaac.lab.envs import ManagerBasedRLEnv
+    from isaaclab.envs import ManagerBasedRLEnv
 
 
 def is_success(env: ManagerBasedRLEnv, command_name: str, threshold: float) -> torch.Tensor:
@@ -65,4 +65,16 @@ def collision_with_obstacles(env: ManagerBasedRLEnv, sensor_cfg: SceneEntityCfg,
     normalized_forces = torch.norm(force_matrix, dim=1)
     forces_active = torch.sum(normalized_forces, dim=-1) > 1
 
+    # print(f"collision return = {torch.where(forces_active, True, False)}")
     return torch.where(forces_active, True, False)
+
+
+def turn_over(env: ManagerBasedRLEnv, sensor_cfg: SceneEntityCfg, threshold: float) -> torch.Tensor:
+    """
+    Check whether rover is turned over.
+    """
+    height_sensor = env.scene.sensors[sensor_cfg.name]
+    condition = (abs(height_sensor.data.quat_w[:,1]) > threshold) | (abs(height_sensor.data.quat_w[:,2]) > threshold)
+    # print(f"condition = {condition}")
+    # torch.where을 활용하여 True 또는 False 반환
+    return torch.where(condition, True, False)

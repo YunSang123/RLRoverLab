@@ -192,6 +192,7 @@ class Trainer:
             # compute actions
             # with torch.no_grad() = 그래디언트 계산을 비활성화하는 것임.
             with torch.no_grad():
+                # self.agents.act는 /isaac-sim/kit/python/lib/python3.10/site-packages/skrl/agents/torch/ppo/ppo.py에서 실행됨!
                 actions = self.agents.act(states, timestep=timestep, timesteps=self.timesteps)[0]
                 # print(f"actions = {actions}")
                 # print("states\n", states)
@@ -357,6 +358,7 @@ class Trainer:
                     self.env.render()
 
                 # write data to TensorBoard
+                print(f"record_transition 실행 위치\n{inspect.getfile(self.agents.record_transition)}")
                 self.agents.record_transition(states=states,
                                               actions=actions,
                                               rewards=rewards,

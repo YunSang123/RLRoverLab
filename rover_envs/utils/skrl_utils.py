@@ -1,9 +1,9 @@
 import copy
 from typing import Any, Tuple
-
+import inspect
 import torch
 import tqdm
-from omni.isaac.lab.envs import ManagerBasedRLEnv
+from isaaclab.envs import ManagerBasedRLEnv
 from skrl.agents.torch import Agent
 from skrl.envs.wrappers.torch import IsaacLabWrapper, Wrapper, wrap_env
 from skrl.trainers.torch import Trainer
@@ -57,6 +57,7 @@ class SkrlOrbitVecWrapper(IsaacLabWrapper):
     def step(self, actions: torch.Tensor) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor, Any]:
         actions = actions.nan_to_num(nan=0.0000001, posinf=0.000001, neginf=0.00001)
 
+        # self._env.step() 실행 위치 = /isaac-sim/exts/omni.isaac.ml_archive/pip_prebundle/gymnasium/wrappers/order_enforcing.py
         self._observations, reward, terminated, truncated, self._info = self._env.step(actions)
         self._obs_dict["policy"] = torch.nan_to_num(self._obs_dict["policy"], nan=0.0, posinf=0.0, neginf=0.0)
         return self._observations["policy"], reward.view(-1, 1), terminated.view(-1, 1), truncated.view(-1, 1), self._info
@@ -202,7 +203,7 @@ class SkrlSequentialLogTrainer(Trainer):
             self.single_agent_eval()
             print("실행후!\n"*10)
             return
-
+        
         # reset env
         states, infos = self.env.reset()
         # evaluation loop
@@ -244,3 +245,29 @@ class SkrlSequentialLogTrainer(Trainer):
                 # reset environments
                 # note: here we do not call reset scene since it is done in the env.step() method
                 states.copy_(next_states)
+                
+    def record(self) -> None:
+        """Record the agents sequentially.
+
+        This method executes the following steps in loop:
+
+        * Compute actions: Compute the actions for the agents.
+        * Step the environments: Step the environments with the computed actions.
+        * Record the environments' transitions: Record the transitions from the environments.
+        * Log custom environment data: Log custom environment data.
+        """
+        print(f"self.env.num_agents : {self.env.num_agents}\n"*10)
+        
+        # set running mode
+        if self.env.num_agents > 1:
+            for agent in self.agents:
+                agent.set_running_mode("eval")
+        else:
+            self.agents.set_running_mode("eval")
+        # single agent
+        if self.env.num_agents == 1:
+            print("실행전!\n"*10)
+            # /isaac-sim/kit/python/lib/python3.10/site-packages/skrl/trainers/torch/base.py에서 single_agent_eval 메소드가 실행됨!
+            self.single_agent_record()
+            print("실행후!\n"*10)
+            return

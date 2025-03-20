@@ -6,7 +6,7 @@ import random
 from datetime import datetime
 
 import gymnasium as gym
-from omni.isaac.lab.app import AppLauncher
+from isaaclab.app import AppLauncher
 
 # add argparse arguments
 parser = argparse.ArgumentParser("Welcome to Orbit: Omniverse Robotics Environments!")
@@ -32,9 +32,9 @@ else:
 app_launcher = AppLauncher(launcher_args=args_cli, experience=app_experience)
 simulation_app = app_launcher.app
 
-from omni.isaac.lab.envs import ManagerBasedRLEnv  # noqa: E402
-from omni.isaac.lab.utils.dict import print_dict  # noqa: E402
-from omni.isaac.lab.utils.io import dump_pickle, dump_yaml  # noqa: E402
+from isaaclab.envs import ManagerBasedRLEnv  # noqa: E402
+from isaaclab.utils.dict import print_dict  # noqa: E402
+from isaaclab.utils.io import dump_pickle, dump_yaml  # noqa: E402
 
 # import omni.isaac.contrib_envs  # noqa: F401
 # import omni.isaac.orbit_envs  # noqa: F401

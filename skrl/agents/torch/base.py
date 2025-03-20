@@ -297,6 +297,7 @@ class Agent:
         :param timesteps: Number of timesteps
         :type timesteps: int
         """
+        print("record_transition 실행됨!")
         if self.write_interval > 0:
             print(f"self.write_interval : {self.write_interval}")
             # compute the cumulative sum of the rewards and timesteps

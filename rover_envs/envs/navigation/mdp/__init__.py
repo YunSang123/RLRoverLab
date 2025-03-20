@@ -1,6 +1,6 @@
-from omni.isaac.lab.envs.mdp import *  # noqa: F401, F403
+from isaaclab.envs.mdp import *  # noqa: F401, F403
 import inspect
-# print(f"mdp 경로 = {inspect.getfile(omni.isaac.lab.envs.mdp)}")
+# print(f"mdp 경로 = {inspect.getfile(isaaclab.envs.mdp)}")
 
 # from .actions import *  # noqa: F401, F403
 from .observations import *  # noqa: F401, F403

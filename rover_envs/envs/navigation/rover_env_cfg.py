@@ -5,26 +5,26 @@ import os
 from dataclasses import MISSING
 import inspect
 
-# isaac_lab/source/extensions/omni.isaac.lab/ 디렉터리로부터 import하는 것
-import omni.isaac.lab.sim as sim_utils
-from omni.isaac.lab.assets import ArticulationCfg, AssetBaseCfg
-from omni.isaac.lab.envs import ManagerBasedRLEnvCfg
-from omni.isaac.lab.managers import ActionTermCfg as ActionTerm
-from omni.isaac.lab.managers import CurriculumTermCfg as CurrTerm  # noqa: F401
-from omni.isaac.lab.managers import EventTermCfg as EventTerm
-from omni.isaac.lab.managers import ObservationGroupCfg as ObsGroup
-from omni.isaac.lab.managers import ObservationTermCfg as ObsTerm
-from omni.isaac.lab.managers import RewardTermCfg as RewTerm
-from omni.isaac.lab.managers import SceneEntityCfg
-from omni.isaac.lab.managers import TerminationTermCfg as DoneTerm
-from omni.isaac.lab.scene import InteractiveSceneCfg  # noqa: F401
-from omni.isaac.lab.sensors import ContactSensorCfg, RayCasterCfg, patterns
-# RayCasterCfg는 /workspace/isaac_lab/source/extensions/omni.isaac.lab/omni/isaac/lab/sensors/ray_caster/ray_caster_cfg.py에서 실행됨!
-from omni.isaac.lab.sim import PhysxCfg
-from omni.isaac.lab.sim import SimulationCfg as SimCfg
-from omni.isaac.lab.terrains import TerrainImporter, TerrainImporterCfg  # noqa: F401
-from omni.isaac.lab.utils import configclass
-from omni.isaac.lab.utils.noise import AdditiveUniformNoiseCfg as Unoise  # noqa: F401
+# isaac_lab/source/extensions/isaaclab/ 디렉터리로부터 import하는 것
+import isaaclab.sim as sim_utils
+from isaaclab.assets import ArticulationCfg, AssetBaseCfg
+from isaaclab.envs import ManagerBasedRLEnvCfg
+from isaaclab.managers import ActionTermCfg as ActionTerm
+from isaaclab.managers import CurriculumTermCfg as CurrTerm  # noqa: F401
+from isaaclab.managers import EventTermCfg as EventTerm
+from isaaclab.managers import ObservationGroupCfg as ObsGroup
+from isaaclab.managers import ObservationTermCfg as ObsTerm
+from isaaclab.managers import RewardTermCfg as RewTerm
+from isaaclab.managers import SceneEntityCfg
+from isaaclab.managers import TerminationTermCfg as DoneTerm
+from isaaclab.scene import InteractiveSceneCfg  # noqa: F401
+from isaaclab.sensors import ContactSensorCfg, RayCasterCfg, patterns
+# RayCasterCfg는 /workspace/isaac_lab/source/extensions/isaaclab/omni/isaac/lab/sensors/ray_caster/ray_caster_cfg.py에서 실행됨!
+from isaaclab.sim import PhysxCfg
+from isaaclab.sim import SimulationCfg as SimCfg
+from isaaclab.terrains import TerrainImporter, TerrainImporterCfg  # noqa: F401
+from isaaclab.utils import configclass
+from isaaclab.utils.noise import AdditiveUniformNoiseCfg as Unoise  # noqa: F401
 
 ##
 # Scene Description
@@ -89,7 +89,7 @@ class RoverSceneCfg(MarsTerrainSceneCfg):
 
     dense_height_scanner = RayCasterCfg(
         prim_path="{ENV_REGEX_NS}/rover/base_footprint",
-        offset=RayCasterCfg.OffsetCfg(pos=[0.0, 0.0, 1.0], rot=[math.cos(math.radians(-60/2)),0.0,math.sin(math.radians(-60/2)),0.0]),
+        offset=RayCasterCfg.OffsetCfg(pos=[0.0, 0.0, 1.0], rot=[math.cos(math.radians(-60/2)),0,math.sin(math.radians(-60/2)),0]),
         attach_yaw_only=False,
         pattern_cfg=patterns.GridPatternCfg(resolution=0.04, size=[1.0, 1.0]),
         debug_vis=True,
@@ -99,7 +99,7 @@ class RoverSceneCfg(MarsTerrainSceneCfg):
     )
     sparse_height_scanner = RayCasterCfg(
         prim_path="{ENV_REGEX_NS}/rover/base_footprint",
-        offset=RayCasterCfg.OffsetCfg(pos=[0.0, 0.0, 1.0], rot=[math.cos(math.radians(-60/2)),0.0,math.sin(math.radians(-60/2)),0.0]),
+        offset=RayCasterCfg.OffsetCfg(pos=[0.0, 0.0, 1.0], rot=[math.cos(math.radians(-60/2)),0,math.sin(math.radians(-60/2)),0]),
         attach_yaw_only=False,
         pattern_cfg=patterns.GridPatternCfg(resolution=0.1, size=[2.0, 2.0]),
         debug_vis=True,
@@ -217,6 +217,11 @@ class TerminationsCfg:
         func=mdp.collision_with_obstacles,
         params={"sensor_cfg": SceneEntityCfg(
             "contact_sensor"), "threshold": 1.0},
+    )
+    turn_over = DoneTerm(
+        func=mdp.turn_over,
+        params={"sensor_cfg": SceneEntityCfg(
+            "dense_height_scanner"), "threshold": 0.5}
     )
 
 

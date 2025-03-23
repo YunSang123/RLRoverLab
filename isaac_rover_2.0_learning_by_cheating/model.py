@@ -143,7 +143,7 @@ class MLP(nn.Module):
     def __init__(
             self, info, cfg, belief_dim):
         super(MLP,self).__init__()
-        self.network = nn.ModuleList()  # MLP for network
+        self.mlp = nn.ModuleList()  # MLP for student policy
         proprioceptive = info["proprioceptive"]             # 4
         action_space = info["actions"]                      # 2
         activation_function = cfg["activation_function"]    # leakyrelu
@@ -151,11 +151,12 @@ class MLP(nn.Module):
 
         in_channels = proprioceptive + belief_dim           # 124
         for feature in network_features:
-            self.network.append(Layer(in_channels, feature, activation_function))
+            self.mlp.append(nn.Linear(in_channels, feature))
+            self.mlp.append(nn.LeakyReLU(inplace=True))
             in_channels = feature
 
-        self.network.append(nn.Linear(in_channels,action_space))
-        self.network.append(nn.Tanh())
+        self.mlp.append(nn.Linear(in_channels,action_space))
+        self.mlp.append(nn.Tanh())
         self.log_std_parameter = nn.Parameter(torch.zeros(action_space))
 
     def forward(self, p, belief):
@@ -189,26 +190,29 @@ class Student(nn.Module):
         # student policy의 최종 MLP
         self.MLP = MLP(info, cfg["mlp"], belief_dim=120)
         print(f"self.MLP = {self.MLP}")
-        print(f"type 출력중!\n{type(self.MLP)}")
-        print("=====================\n"*5)
+        # print(f"type 출력중!\n{type(self.MLP)}")
+        # print("=====================\n"*5)
         
         # Load teacher policy
         teacher_policy = torch.load(teacher, weights_only=True)["policy"]
         print(f"teacher_policy의 key 출력중!")
-        print(f"teacher_policy의 type은 {type(teacher_policy)}")
+        # print(f"teacher_policy의 type은 {type(teacher_policy)}")
         for k, v in teacher_policy.items():
             print(k)
-            print(v)
+            # print(v)
             
         # Filter out encoder to only maintain network MLP
-        mlp_params = {k: v for k,v in teacher_policy.items() if ("network" in k or "log_std_parameter" in k)}
+        mlp_params = {k: v for k,v in teacher_policy.items() if (k.startswith("mlp") or "log_std_parameter" in k)}
         encoder_params1 = {k[0:]: v for k,v in teacher_policy.items() if "sparse_encoder" in k}
         encoder_params2 = {k[0:]: v for k,v in teacher_policy.items() if "dense_encoder" in k}
         # print(f"mlp_params = {mlp_params}")
         # print(f"encoder_params1 = {encoder_params1}")
         # print(f"\n")
         # print(f"encoder_params2 = {encoder_params2}")
-        # print(mlp_params.keys())
+        print(f"mlp_params key 출력중!")
+        for k, v in mlp_params.items():
+            print(k)
+            # print(v)
         # print(encoder_params1.keys())
         # print(encoder_params2.keys())
         

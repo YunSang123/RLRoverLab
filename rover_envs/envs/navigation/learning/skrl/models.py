@@ -488,7 +488,7 @@ class GaussianNeuralNetworkConv(GaussianMixin, BaseModel):
             
             self.sparse_encoder = ConvHeightmapEncoder(self.sparse_encoder_input_size, encoder_layers, encoder_activation)
 
-            in_channels += self.sparse_encoder.out_features    # in_channels = 65. 원래 5였는데, self.encoder의 out_features가 60이어서 65가 됨.
+            in_channels += self.sparse_encoder.out_features    # in_channels = 125. 원래 65였는데, self.encoder의 out_features가 60이어서 125가 됨.
 
 
         self.mlp = nn.ModuleList()
@@ -496,7 +496,7 @@ class GaussianNeuralNetworkConv(GaussianMixin, BaseModel):
         # mlp_layers = [256,160,128]
         # 실제 action을 출력하는 policy network를 설계하는 단계.
         # Exteroception(60) + Proprioception(5)를 input으로 받음.
-        # 65->256->160->128->2. 마지막 2는 action임. lin_vel, ang_vel
+        # 125->256->160->128->2. 마지막 2는 action임. lin_vel, ang_vel
         for feature in mlp_layers:
             # print("feature : ",feature)
             self.mlp.append(nn.Linear(in_channels, feature))

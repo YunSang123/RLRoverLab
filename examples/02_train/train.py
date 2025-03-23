@@ -13,8 +13,8 @@ from isaaclab.app import AppLauncher      # Omniverse Isaac Sim을 실행하는 
 
 # add argparse arguments
 parser = argparse.ArgumentParser("Welcome to Orbit: Omniverse Robotics Environments!")
-parser.add_argument("--load", action="store_true", default=False, help="Load previous trained agent.pt")
-parser.add_argument("--headless", action="store_true", default=False, help="Force display off at all times.")           # GUI 없이 실행
+parser.add_argument("--load", action="store_true", default=True, help="Load previous trained agent.pt")
+parser.add_argument("--headless", action="store_true", default=True, help="Force display off at all times.")           # GUI 없이 실행
 parser.add_argument("--video", action="store_true", default=False, help="Record videos during training.")               # 학습 중 비디오 녹화 여부
 parser.add_argument("--video_length", type=int, default=2000, help="Length of the recorded video (in steps).")           # 비디오 길이 설정.
 parser.add_argument("--video_interval", type=int, default=2000, help="Interval between video recordings (in steps).")   # 비디오 녹화 간격.
@@ -239,8 +239,14 @@ def train():
     #######################
     if args_cli.load:   # 기존 model을 이어서 학습
         print("Load previous model and train it!")
-        checkpoint_path = "./load/agent_11200.pt"
+        checkpoint_path = "./load/osr_440k.pt"
         checkpoint = torch.load(checkpoint_path)
+        print(f"agent.policy 타입, 내용 출력!\n"*10)
+        print(f"type = {type(agent.policy)}")
+        print("\n"*5)
+        print(f"{agent.policy}")
+        print("\n"*5)
+        print(f"checkpoint[policy] = {checkpoint['policy']}")
         agent.policy.load_state_dict(checkpoint["policy"])
         agent.value.load_state_dict(checkpoint["value"])
         agent.optimizer.load_state_dict(checkpoint["optimizer"])

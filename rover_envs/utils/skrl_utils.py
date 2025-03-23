@@ -267,7 +267,7 @@ class SkrlSequentialLogTrainer(Trainer):
         # single agent
         if self.env.num_agents == 1:
             print("실행전!\n"*10)
-            # /isaac-sim/kit/python/lib/python3.10/site-packages/skrl/trainers/torch/base.py에서 single_agent_eval 메소드가 실행됨!
+            # /isaac-sim/kit/python/lib/python3.10/site-packages/skrl/trainers/torch/base.py에서 single_agent_record 메소드가 실행됨!
             self.single_agent_record()
             print("실행후!\n"*10)
             return

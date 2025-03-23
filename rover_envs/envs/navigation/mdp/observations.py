@@ -1,5 +1,5 @@
 from __future__ import annotations
-
+import inspect
 from typing import TYPE_CHECKING
 
 import torch
@@ -12,15 +12,18 @@ if TYPE_CHECKING:
     from isaaclab.envs import ManagerBasedRLEnv
 
 
+# rover의 heading과 rover로부터 target position까지의 방향 벡터의 각도 차
+# target의 orientation은 전혀 신경쓸 필요 없다!
 def angle_to_target_observation(env: ManagerBasedRLEnv, command_name: str) -> torch.Tensor:
     """Calculate the angle to the target."""
 
     # Get vector(x,y) from rover to target, in base frame of the rover.
     target_vector_b = env.command_manager.get_command(command_name)[:, :2]
-
+    # print("observations.py")
+    # print(f"target_vector_b = {target_vector_b}")
+    # print(f"env.command_manager.get_command(command_name) = {env.command_manager.get_command(command_name)}")
     # Calculate the angle between the rover's heading [1, 0] and the vector to the target.
     angle = torch.atan2(target_vector_b[:, 1], target_vector_b[:, 0])
-
     return angle.unsqueeze(-1)
 
 
@@ -90,10 +93,11 @@ def height_scan_rover(env: ManagerBasedRLEnv, sensor_cfg: SceneEntityCfg) -> tor
     
     return sensor.data.pos_w[:, 2].unsqueeze(1) - sensor.data.ray_hits_w[..., 2] - 0.26878
 
-
+# rover의 heading과 target pose의 orientation 사이의 각도 차
 def angle_diff(env: ManagerBasedRLEnv, command_name: str) -> torch.Tensor:
     """Calculate the angle difference between the rover's heading and the target."""
     # Get the angle to the target
     heading_angle_diff = env.command_manager.get_command(command_name)[:, 3]
-
+    # print("observations.py")
+    # print(f"heading_angle_diff = {heading_angle_diff*180/3.146}")
     return heading_angle_diff.unsqueeze(-1)

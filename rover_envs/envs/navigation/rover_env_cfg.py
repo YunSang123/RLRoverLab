@@ -126,14 +126,14 @@ class ObservationCfg:
         distance = ObsTerm(func=mdp.distance_to_target_euclidean, params={
                            "command_name": "target_pose"}, scale=0.11)
         heading = ObsTerm(
-            func=mdp.angle_to_target_observation,
+            func=mdp.angle_to_target_observation,   # rover의 heading과 rover로부터 target position까지의 방향 벡터의 각도 차 (target의 orientation은 신경 쓸 필요가 없다!)
             params={
                 "command_name": "target_pose",
             },
             scale=1 / math.pi,
         )
         angle_diff = ObsTerm(
-            func=mdp.angle_diff,
+            func=mdp.angle_diff,                    # rover의 heading과 target pose의 orientation 사이의 각도 차
             params={"command_name": "target_pose"},
             scale=1 / math.pi
         )

@@ -113,7 +113,7 @@ class Trainer():
         train_ds = TeacherDataset("teacher_model/")
         train_loader = DataLoader(train_ds,batch_size=self.BATCH_SIZE,num_workers=1,pin_memory=True, shuffle=False)
         
-        model = Student(info=train_ds.get_info(), cfg=self.cfg, teacher="teacher_model/agent_219000.pt").to(self.DEVICE)
+        model = Student(info=train_ds.get_info(), cfg=self.cfg, teacher="teacher_model/osr_740k.pt").to(self.DEVICE)
         loss_fn = {
             "behaviour":     nn.MSELoss(reduction="mean"),
             "recontruction": nn.MSELoss(reduction="mean")

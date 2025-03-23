@@ -151,13 +151,13 @@ def main():
     print(f"num_actinos = {num_actions}")
 
     trainer_cfg = experiment_cfg["trainer"]
-    trainer_cfg["timesteps"] = 100
+    trainer_cfg["timesteps"] = 1500
 
     agent = get_agent(args_cli.agent, env, observation_space, action_space, experiment_cfg, conv=True)
     # Get the checkpoint path from the experiment configuration
     print(f'args_cli.task: {args_cli.task}')
     # agent_policy_path = gym.spec(args_cli.task).kwargs.pop("best_model_path") # tmp
-    agent_policy_path = "./load/agent_11200.pt"
+    agent_policy_path = "./load/osr_740k.pt"
     print("agent_policy_path : ", agent_policy_path)
     
     agent.load(agent_policy_path)

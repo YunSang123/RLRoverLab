@@ -24,11 +24,11 @@ class Encoder(nn.Module):
     def __init__(
             self, info, cfg, encoder=""):
         super(Encoder,self).__init__()
-        encoder_features = cfg["encoder_features"]
-        activation_function = cfg["activation_function"]
+        encoder_features = cfg["encoder_features"]          # [1500,1000]
+        activation_function = cfg["activation_function"]    # [leakyrelu]
         
         self.encoder = nn.ModuleList() 
-        in_channels = info[encoder]
+        in_channels = info[encoder]                         # encoder가 sparse면 in_channels는 441, encoder가 dense면 in_channels는 676
         for feature in encoder_features:
             self.encoder.append(Layer(in_channels, feature, activation_function))
             in_channels = feature
@@ -44,19 +44,19 @@ class Belief_Encoder(nn.Module):
     def __init__(
             self, info, cfg, input_dim=120):
         super(Belief_Encoder,self).__init__()
-        self.hidden_dim = cfg["hidden_dim"]
-        self.n_layers = cfg["n_layers"]
-        activation_function = cfg["activation_function"]
-        proprioceptive = info["proprioceptive"]
-        input_dim = proprioceptive+input_dim
+        self.hidden_dim = cfg["hidden_dim"]                     # 300
+        self.n_layers = cfg["n_layers"]                         # 2
+        activation_function = cfg["activation_function"]        # leakyrelu
+        proprioceptive = info["proprioceptive"]                 # 4
+        input_dim = proprioceptive+input_dim                    # 4+2000=2004
         
         self.gru = nn.GRU(input_dim, self.hidden_dim, self.n_layers, batch_first=True)
         self.gb = nn.ModuleList()
         self.ga = nn.ModuleList()
-        gb_features = cfg["gb_features"]
-        ga_features = cfg["ga_features"]
+        gb_features = cfg["gb_features"]                        # [128,128,120]
+        ga_features = cfg["ga_features"]                        # [128,128,120]
 
-        in_channels = self.hidden_dim
+        in_channels = self.hidden_dim                           # 300
         for feature in gb_features:
             self.gb.append(Layer(in_channels, feature, activation_function))
             in_channels = feature
@@ -139,18 +139,17 @@ class Belief_Decoder(nn.Module):
             m.bias.data.fill_(1.0)
 
 
-
 class MLP(nn.Module):
     def __init__(
             self, info, cfg, belief_dim):
         super(MLP,self).__init__()
         self.network = nn.ModuleList()  # MLP for network
-        proprioceptive = info["proprioceptive"]
-        action_space = info["actions"]
-        activation_function = cfg["activation_function"]
-        network_features = cfg["network_features"]
+        proprioceptive = info["proprioceptive"]             # 4
+        action_space = info["actions"]                      # 2
+        activation_function = cfg["activation_function"]    # leakyrelu
+        network_features = cfg["network_features"]          # [256,160,128]
 
-        in_channels = proprioceptive + belief_dim
+        in_channels = proprioceptive + belief_dim           # 124
         for feature in network_features:
             self.network.append(Layer(in_channels, feature, activation_function))
             in_channels = feature
@@ -172,7 +171,7 @@ class MLP(nn.Module):
 
 class Student(nn.Module):
     def __init__(
-            self, info, cfg,teacher):
+            self, info, cfg, teacher):
         super(Student,self).__init__()
 
         self.n_re = info["reset"]
@@ -183,21 +182,36 @@ class Student(nn.Module):
         
         self.encoder1 = Encoder(info, cfg["encoder"], encoder="sparse")
         self.encoder2 = Encoder(info, cfg["encoder"], encoder="dense")
-        encoder_dim = cfg["encoder"]["encoder_features"][-1] * 2
+        encoder_dim = cfg["encoder"]["encoder_features"][-1] * 2        # encoder_dim = 2000
         self.belief_encoder = Belief_Encoder(info, cfg["belief_encoder"], input_dim=encoder_dim)
         self.belief_decoder = Belief_Decoder(info, cfg["belief_decoder"], cfg["belief_encoder"]["hidden_dim"])
+        
+        # student policy의 최종 MLP
         self.MLP = MLP(info, cfg["mlp"], belief_dim=120)
+        print(f"self.MLP = {self.MLP}")
+        print(f"type 출력중!\n{type(self.MLP)}")
+        print("=====================\n"*5)
+        
         # Load teacher policy
-        teacher_policy = torch.load(teacher)["policy"]
+        teacher_policy = torch.load(teacher, weights_only=True)["policy"]
+        print(f"teacher_policy의 key 출력중!")
+        print(f"teacher_policy의 type은 {type(teacher_policy)}")
+        for k, v in teacher_policy.items():
+            print(k)
+            print(v)
+            
         # Filter out encoder to only maintain network MLP
-        # print(teacher_policy.keys())
-
         mlp_params = {k: v for k,v in teacher_policy.items() if ("network" in k or "log_std_parameter" in k)}
-        encoder_params1 = {k[9:]: v for k,v in teacher_policy.items() if "encoder0" in k}
-        encoder_params2 = {k[9:]: v for k,v in teacher_policy.items() if "encoder1" in k}
+        encoder_params1 = {k[0:]: v for k,v in teacher_policy.items() if "sparse_encoder" in k}
+        encoder_params2 = {k[0:]: v for k,v in teacher_policy.items() if "dense_encoder" in k}
+        # print(f"mlp_params = {mlp_params}")
+        # print(f"encoder_params1 = {encoder_params1}")
+        # print(f"\n")
+        # print(f"encoder_params2 = {encoder_params2}")
         # print(mlp_params.keys())
         # print(encoder_params1.keys())
         # print(encoder_params2.keys())
+        
         # Load state dict
         self.MLP.load_state_dict(mlp_params)
         self.encoder1.load_state_dict(encoder_params1)

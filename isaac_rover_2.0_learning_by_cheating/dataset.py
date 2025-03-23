@@ -15,7 +15,7 @@ class TeacherDataset(Dataset):
 
         # Import data and setup variables
         sort_data(data_dir)
-        self.data = torch.load(data_dir + "data.pt")
+        self.data = torch.load(data_dir + "data.pt", weights_only=True)
         # self.remove_idx = torch.load('remove_idx.pt').to('cpu')
         self.heightmap = Heightmap('cpu')
 

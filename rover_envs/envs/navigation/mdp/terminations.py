@@ -27,9 +27,12 @@ def is_success(env: ManagerBasedRLEnv, command_name: str, threshold: float) -> t
 
     # Calculating the distance and determining if the target is reached
     distance = torch.norm(target_position, p=2, dim=-1)
-        
-    return torch.where((distance < threshold) & (torch.abs(angle) < 0.1), True, False)
-    # return torch.where(distance < threshold, True, False)
+    
+    # 원본 코드 : 거리 + 각도가 threshold 이내로 들어와야함.
+    # return torch.where((distance < threshold) & (torch.abs(angle) < 0.1), True, False)
+
+    # 수정된 코드 : 거리만 threshold 이내로 들어오기!
+    return torch.where(distance < threshold, True, False)
 
 
 def far_from_target(env: ManagerBasedRLEnv, command_name: str, threshold: float) -> torch.Tensor:

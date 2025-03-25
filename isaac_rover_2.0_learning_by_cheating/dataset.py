@@ -15,7 +15,12 @@ class TeacherDataset(Dataset):
 
         # Import data and setup variables
         sort_data(data_dir)
-        self.data = torch.load(data_dir + "data.pt", weights_only=True)
+        self.data = torch.load(data_dir + "data.pt", map_location='cpu')
+        print(f"self.data.shape = {self.data['data'].shape}")
+        # self.data = torch.load(data_dir + "data.pt")
+        # print("self.data 출력중!\n"*10)
+        # print(self.data)
+
         # self.remove_idx = torch.load('remove_idx.pt').to('cpu')
         self.heightmap = Heightmap('cpu')
 
@@ -36,6 +41,10 @@ class TeacherDataset(Dataset):
         data = self.add_noise(gt)
         # shift actions to simulate random delay for whole rover
         delay = random.randint(0, max_delay)
+        
+        # re = 1
+        # ac = 2
+        # ex = 1177
         re, ac, ex = info["reset"], info["actions"], info["sparse"] + info["dense"]
         actions_delayed = torch.roll(data[:, re:re + ac], -delay, 0)
         actions_delayed = actions_delayed[:-(max_delay+1), :]
@@ -58,6 +67,7 @@ class TeacherDataset(Dataset):
             #gt_ex += self.rotate()
                     # Add initial noise to data
             #gt_ex = self.add_static_noise(gt_ex)
+            # print(f"\ngt_ex.shape = {gt_ex.shape}")
             gt_ex = self.add_large_noise(gt_ex)
 
             gt_ex = self.add_occlusions(gt_ex)
@@ -126,17 +136,17 @@ class TeacherDataset(Dataset):
             noise_mode["missing_points_prob"] = 0.2
         return noise_mode
 
-    def create_rand_tensor(self, dev, shape, add_offset=False, offset=0, is_offset_dev=False, offset_dev=0.0):
+    def create_rand_tensor(self, dev, shape, add_offset=False, offset=0, is_offset_dev=False, offset_dev=0.0, device="cpu"):
         # not possible to move height points on xy plane
         
-        rand = torch.empty(shape).normal_(mean=0,std=dev)
+        rand = torch.empty(shape, device=device).normal_(mean=0,std=dev)
         # rand = torch.rand(shape)
         # rand = torch.multiply(rand, dev * 2)
         # rand = torch.subtract(rand, dev)
         #print(rand.shape, rand.mean())
         if add_offset:
             if is_offset_dev:
-                offset = torch.rand(shape)
+                offset = torch.rand(shape, device=device)
                 offset = torch.multiply(offset, offset_dev * 2)
                 offset = torch.subtract(offset, dev)
                 torch.add(rand, offset)
@@ -160,13 +170,16 @@ class TeacherDataset(Dataset):
         num_large_gaussian = 3
         variance_large_gaussian = 4.0
 
+        # print(f"num_large_gaussian = {num_large_gaussian}")
         large_gaussian_holes = self.random_points(num_large_gaussian)
-
+        # print(f"large_gaussian_holes = {large_gaussian_holes.shape}")
         for i in range(len(large_gaussian_holes)):
             large_distances = self.grid_dist_to_points(large_gaussian_holes[i])
-
-            large_gaussian = self.gaussian_hole(large_distances, variance_large_gaussian)
+            # print(f"large_distances = {large_distances.shape}")
             
+            large_gaussian = self.gaussian_hole(large_distances, variance_large_gaussian)
+            # print(f"large_gaussian = {large_gaussian.shape}")
+            # print(f"data = {data.shape}")
             data = torch.add(data, -large_gaussian)
 
         return data
@@ -254,7 +267,9 @@ class TeacherDataset(Dataset):
         b = self.heightmap_coordinates[:,:2] # The points to measure distance to the "origin points"
 
         distances = torch.cdist(a.float(), b.float(), p=2.0)
-
+        # print(f"a = {a.shape}")
+        # print(f"b = {b.shape}")
+        # print(f"distances = {distances.shape}")
         return distances # Return [instances, 1746] tensor
 
     # Apply the function of a gaussian hole to the grid_dist points.

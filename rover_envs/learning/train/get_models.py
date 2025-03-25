@@ -69,13 +69,17 @@ def get_model_gaussian(env: ManagerBasedRLEnv, observation_space: Box, action_sp
 
 def get_model_gaussian_conv(env: ManagerBasedRLEnv, observation_space: Box, action_space: Box):
     models = {}
+    # Exteroception input size
     dense_encoder_input_size = env.observation_manager.group_obs_term_dim["policy"][-2][0]
     sparse_encoder_input_size = env.observation_manager.group_obs_term_dim["policy"][-1][0]
     # print("isaac_rover/rover_envs/learning/train/get_models.py\n"*10)
     print("dense_encoder_input_size : ", dense_encoder_input_size)      # 3721 = 61*61
     print("sparse_encoder_input_size : ", sparse_encoder_input_size)    # 961 = 31*31
-    mlp_input_size = 5
-
+    
+    # Proprioception input size
+    # 4 = actions(2) + distance(1) + heading(1)
+    mlp_input_size = 4
+    
     models["policy"] = GaussianNeuralNetworkConv(
         observation_space=observation_space,
         action_space=action_space,
@@ -101,6 +105,7 @@ def get_model_gaussian_conv(env: ManagerBasedRLEnv, observation_space: Box, acti
         encoder_activation="leaky_relu",
     )
     print("============!!!!!!!!!!!!!!!!!!!!!!!!!!!!===========================================================")
+    print(f"get_models.py에서 출력중!")
     print("models[\"policy\"] 정보 출력중:")
     print(models["policy"])
     print("============!!!!!!!!!!!!!!!!!!!!!!!!!!!!===========================================================")

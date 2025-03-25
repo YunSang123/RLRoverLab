@@ -21,8 +21,8 @@ class Heightmap():
 
         self.beneath_border = [[[0.32,0],[0.320,1],'left'],[[-0.320,0],[-0.320,1],'right'],[[-0.320,-0.5],[0.320,-0.5],'over'],[[-0.320,0.6],[0.320,0.6],'under']] 
 
-        self.delta_coarse = 0.15
-        self.delta_fine = 0.05
+        self.delta_coarse = 0.15        # sparse
+        self.delta_fine = 0.05          # dense
         
         self.see_beneath = False
         self.HD_enabled = True
@@ -154,7 +154,8 @@ class Heightmap():
 
     def get_coordinates(self):
         idxs = torch.cat((self.coarse_idx, self.fine_idx),0)
-        return self.distribution[idxs]
+        return self.distribution[idxs[:1117]]
+        # return self.distribution[idxs] # 원래 코드
 
     def _inside_borders(self, point, borderLines):
 

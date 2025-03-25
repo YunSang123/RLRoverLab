@@ -1,5 +1,7 @@
-import pickle
-import isaacsim.core.utils.prims as prim_utils
+import torch
 
-with open('./data/env.pkl', 'rb') as f:
-    data = pickle.load(f)
+student = torch.load("runs/test7/best.pt")
+# print(student["state_dict"])
+
+for k,v in student["state_dict"].items():
+    print(k)

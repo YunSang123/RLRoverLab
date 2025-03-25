@@ -132,11 +132,11 @@ class ObservationCfg:
             },
             scale=1 / math.pi,
         )
-        angle_diff = ObsTerm(
-            func=mdp.angle_diff,                    # rover의 heading과 target pose의 orientation 사이의 각도 차
-            params={"command_name": "target_pose"},
-            scale=1 / math.pi
-        )
+        # angle_diff = ObsTerm(
+        #     func=mdp.angle_diff,                    # rover의 heading과 target pose의 orientation 사이의 각도 차
+        #     params={"command_name": "target_pose"},
+        #     scale=1 / math.pi
+        # )
         dense_height_scan = ObsTerm(
             func=mdp.height_scan_rover,
             scale=1,

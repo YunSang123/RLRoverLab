@@ -39,6 +39,142 @@ class Encoder(nn.Module):
             x = layer(x)
         
         return x
+    
+class ConvHeightmapEncoder(nn.Module):
+    def __init__(self, in_channels, encoder_features=[16, 32]):
+        # print("in_channels = ", in_channels)                        # 10201
+        # print("encoder_features = ", encoder_features)              # 8, 16, 32, 64
+        # print("encoder_activation = ", encoder_activation)          # leaky_relu
+        super().__init__()
+        # self.heightmap_size는 rover_env_cfg.py에서 height_scanner의 size의 제곱근과 같음. Ex) resolution=0.05, size=[5.0, 5.0] 이라고 하면, 한 변이 101개이므로, self.heightmap_size는 101이 나옴.
+        self.heightmap_size = torch.sqrt(torch.tensor(in_channels)).int()   # tensor(101, dtype=torch.int32)
+        
+        # print("self.heightmap_size = ",self.heightmap_size)         # tensor(101, dtype=torch.int32)
+        # kernel = 가중치 필터
+        kernel_size = 3
+        
+        # kernel이 움직이는 칸 수
+        # 무조건 웬만하면 1로 하자.
+        stride = 1
+        
+        # padding : 배열의 둘레를 확장하고 0으로 채우는 연산. Ex) 3,3일 경우 5,5로 되며 둘레가 다 0으로 채워짐.
+        padding = 1
+        
+        self.encoder_layers = nn.ModuleList()
+        in_channels = 1  # 1 channel for heightmap
+        
+        """
+        kernel_size : 합성곱 필터 크기
+        stride : 필터가 움직이는 간격
+        padding : 배열의 둘레를 확장하기 위한 값
+        
+        nn.Conv2d : 입력 채널(in_channels)에서 출력 채널(feature)로의 합성곱 연산을 수행하는 nn.Conv2d 레이어를 추가.
+        nn.BatchNorm2d : 배치 정규화를 수행하여 학습 속도를 높이고 안정성을 향상
+        get_activation : 활성화 함수 추가
+        nn.MaxPool2d : 최대 풀링(Max Pooling)을 수행하여 입력 데이터를 압축하고 주요 정보를 강조
+        
+        """
+        for feature in encoder_features:
+            # print("\n\n12342352358932y589027589")
+            # print("feature = ", feature)    # feature가 불러와질때마다 8, 16, 32, 64가 출력됨.
+            self.encoder_layers.append(nn.Conv2d(in_channels, feature, kernel_size=kernel_size,
+                                       stride=stride, padding=padding, bias=False))
+            # print("encoder_layers 출력 : \n",self.encoder_layers)
+            self.encoder_layers.append(nn.BatchNorm2d(feature))
+            # self.encoder_layers.append(nn.MaxPool2d(kernel_size=2, stride=2))
+            # print("encoder_layers 출력 : \n",self.encoder_layers)
+            self.encoder_layers.append(nn.LeakyReLU(inplace=True))
+            # print("encoder_layers 출력 : \n",self.encoder_layers)
+            self.encoder_layers.append(nn.Conv2d(feature, feature, kernel_size=kernel_size,
+                                       stride=stride, padding=padding, bias=False))
+            # print("encoder_layers 출력 : \n",self.encoder_layers)
+            self.encoder_layers.append(nn.BatchNorm2d(feature))
+            # print("encoder_layers 출력 : \n",self.encoder_layers)
+            self.encoder_layers.append(nn.LeakyReLU(inplace=True))
+            # print("encoder_layers 출력 : \n",self.encoder_layers)
+            # Pooling = 행렬을 압축해, 특정 데이터를 강조하는 역할을 수행!
+            self.encoder_layers.append(nn.MaxPool2d(kernel_size=2, stride=2))
+            # print("encoder_layers 출력 : \n",self.encoder_layers)
+            in_channels = feature
+            # print("in_channels = ", in_channels)    # feature가 불러와질때마다 8, 16, 32, 64가 출력됨.
+            # print("\n\n")
+        out_channels = in_channels
+        # print("out_channels = ", out_channels)      # 마지막으로 in_cprint("flatten_size : ", flatten_size)
+        
+        
+        
+        """_summary_
+        목적 : CNN 레이어를 통과한 후 데이터의 너비(w)와 높이(h)를 계산하기 위함
+        방법 : Kernel, stride, padding을 전부 고려해서 계산
+        """
+        flatten_size = [self.heightmap_size, self.heightmap_size]
+        for _ in encoder_features:
+            # Conv2D 레이어를 거치면 아래와 같이 너비와 높이가 변함.
+            w = (flatten_size[0] - kernel_size + 2 * padding) // stride + 1
+            # print("w = ", w)
+            h = (flatten_size[1] - kernel_size + 2 * padding) // stride + 1
+            # print("h = ", h)
+            
+            # Conv2D 레이어를 거치면 아래와 같이 너비와 높이가 변함.
+            w = (w - kernel_size + 2 * padding) // stride + 1
+            # print("w = ", w)
+            h = (h - kernel_size + 2 * padding) // stride + 1
+            # print("h = ", h)
+            
+            # Max Pooling을 거치면 아래와 같이 너비와 높이가 변함!
+            w = (w - 2) // 2 + 1
+            h = (h - 2) // 2 + 1
+            flatten_size = [w, h]   # flatten_size :  [tensor(6, dtype=torch.int32), tensor(6, dtype=torch.int32)]
+            
+        self.conv_out_features = out_channels * flatten_size[0] * flatten_size[1]   # 64*6*6=tensor(2304, dtype=torch.int32)
+
+        features = [80, 60]
+
+        self.mlps = nn.ModuleList()
+        in_channels = self.conv_out_features    # in_channels =  tensor(2304, dtype=torch.int32)
+        # print("isaac_rover/rover_envs/envs/navigation/learning/skrl/models.py에서 실행중\n"*10)
+        # print(f"in_channels = {in_channels}")
+        
+        for feature in features:
+            # print(f"")
+            self.mlps.append(nn.Linear(in_channels, feature))
+            self.mlps.append(nn.LeakyReLU(inplace=True))
+            in_channels = feature
+        # Mlp : 2304 -> 80 -> 60
+
+        self.out_features = features[-1]
+
+    def forward(self, x):
+        # x is a flattened heightmap, reshape it to 2D
+        # view함수는 텐서의 shape을 변경하는 함수임.
+        # 처음에 -1은 자동으로 차원을 지정하라는 의미. 즉, 뒤의 값인 1에 맞게 알아서 shape이 변경됨.
+        # print("isaac_rover/rover_envs/envs/navigation/learning/skrl/models.py\n" * 20)
+        # print("self.heightmap_size : ", self.heightmap_size)
+        # print("x.shape : ", x.shape)  # 현재 x의 크기 확인
+        # print("변경 전!")
+        # print("x.shape = ",x.shape)
+        x = x.view(-1, 1, self.heightmap_size, self.heightmap_size)
+        # print(f"heightmap_size = {self.heightmap_size}")
+        # print("%^&*(^*%*&%*&%^*(%&*(%*&%&*(%*&(%&*(%&*(())))))))")
+        # print("x 출력중")
+        # print(x)
+        # print("변경 후!")
+        # print("x.shape = ",x.shape)
+
+        for layer in self.encoder_layers:
+            x = layer(x)
+            # print("x = layer(x) 결과 출력")
+            # print(x.shape)
+
+        x = x.view(-1, self.conv_out_features)
+        # print("%^&*(^*%*&%*&%^*(%&*(%*&%&*(%*&(%&*(%&*(())))))))")
+        # print("x 출력중")
+        # print(x)
+        for layer in self.mlps:
+            x = layer(x)
+            # print("x = layer(x) 결과 출력")
+            # print(x)
+        return x
 
 class Belief_Encoder(nn.Module):
     def __init__(
@@ -165,7 +301,7 @@ class MLP(nn.Module):
         # print(belief.shape)
         x = torch.cat((p,belief),dim=2)
         # print(x.shape)
-        for layer in self.network:
+        for layer in self.mlp:
             x = layer(x)
         return x, self.log_std_parameter
 
@@ -175,52 +311,69 @@ class Student(nn.Module):
             self, info, cfg, teacher):
         super(Student,self).__init__()
 
-        self.n_re = info["reset"]
-        self.n_pr = info["proprioceptive"]
-        self.n_sp = info["sparse"]
-        self.n_de = info["dense"]
-        self.n_ac = info["actions"]
+        self.n_re = info["reset"]           # 1
+        self.n_pr = info["proprioceptive"]  # 4
+        self.n_sp = info["sparse"]          # 441
+        self.n_de = info["dense"]           # 676
+        self.n_ac = info["actions"]         # 2
+        conv_encoder_layers = cfg["conv_encoder"]["encoder_features"]
         
-        self.encoder1 = Encoder(info, cfg["encoder"], encoder="sparse")
-        self.encoder2 = Encoder(info, cfg["encoder"], encoder="dense")
-        encoder_dim = cfg["encoder"]["encoder_features"][-1] * 2        # encoder_dim = 2000
+        self.sparse_encoder = ConvHeightmapEncoder(self.n_sp, conv_encoder_layers)
+        self.dense_encoder = ConvHeightmapEncoder(self.n_de, conv_encoder_layers)
+        encoder_dim = cfg["conv_encoder"]["output_size"] * 2        # encoder_dim = 2000
         self.belief_encoder = Belief_Encoder(info, cfg["belief_encoder"], input_dim=encoder_dim)
         self.belief_decoder = Belief_Decoder(info, cfg["belief_decoder"], cfg["belief_encoder"]["hidden_dim"])
         
         # student policy의 최종 MLP
         self.MLP = MLP(info, cfg["mlp"], belief_dim=120)
-        print(f"self.MLP = {self.MLP}")
+        # print(f"self.MLP = {self.MLP}")
         # print(f"type 출력중!\n{type(self.MLP)}")
         # print("=====================\n"*5)
         
         # Load teacher policy
         teacher_policy = torch.load(teacher, weights_only=True)["policy"]
-        print(f"teacher_policy의 key 출력중!")
+        # print(f"teacher_policy의 key 출력중!")
         # print(f"teacher_policy의 type은 {type(teacher_policy)}")
-        for k, v in teacher_policy.items():
-            print(k)
+        # for k, v in teacher_policy.items():
+        #     print(k)
             # print(v)
             
         # Filter out encoder to only maintain network MLP
         mlp_params = {k: v for k,v in teacher_policy.items() if (k.startswith("mlp") or "log_std_parameter" in k)}
-        encoder_params1 = {k[0:]: v for k,v in teacher_policy.items() if "sparse_encoder" in k}
-        encoder_params2 = {k[0:]: v for k,v in teacher_policy.items() if "dense_encoder" in k}
+        sparse_encoder_params = {k[15:]: v for k,v in teacher_policy.items() if "sparse_encoder" in k}
+        dense_encoder_params = {k[14:]: v for k,v in teacher_policy.items() if "dense_encoder" in k}
         # print(f"mlp_params = {mlp_params}")
         # print(f"encoder_params1 = {encoder_params1}")
         # print(f"\n")
         # print(f"encoder_params2 = {encoder_params2}")
-        print(f"mlp_params key 출력중!")
-        for k, v in mlp_params.items():
-            print(k)
+        # print()
+        # print(f"mlp_params key 출력중!")
+        # for k, v in mlp_params.items():
+        #     print(k)
+        
+        # print(f"sparse_encoder_params 출력중!")
+        # for k, v in sparse_encoder_params.items():
+        #     print(k)
             # print(v)
+            
+        # print(f"self.sparse_encoder 출력중!")
+        # print(self.sparse_encoder)
         # print(encoder_params1.keys())
         # print(encoder_params2.keys())
         
         # Load state dict
         self.MLP.load_state_dict(mlp_params)
-        self.encoder1.load_state_dict(encoder_params1)
-        self.encoder2.load_state_dict(encoder_params2)
-        
+        self.sparse_encoder.load_state_dict(sparse_encoder_params)
+        self.dense_encoder.load_state_dict(dense_encoder_params)
+        # print(f"self.MLP 출력중!\n{self.MLP}")
+        # print(f"self.sparse_encoder 출력중!\n{self.sparse_encoder}")
+        # print(f"self.dense_encoder 출력중!\n{self.dense_encoder}")
+        # print("Before .to(cuda):", next(self.MLP.parameters()).device)
+        # print("Before .to(cuda):", next(self.sparse_encoder.parameters()).device)
+        # print("Before .to(cuda):", next(self.dense_encoder.parameters()).device)
+        self.MLP.to("cuda")
+        self.sparse_encoder.to("cuda")
+        self.dense_encoder.to("cuda")
 
     def forward(self, x, h):
         n_ac = self.n_ac
@@ -244,9 +397,17 @@ class Student(nn.Module):
         
         # e = x[:,:,n_p:1084]         # Extract exteroceptive information
         
-        e_l1 = self.encoder1(sparse) # Pass exteroceptive information through encoder
+        e_l1 = self.sparse_encoder(sparse) # Pass exteroceptive information through encoder
         
-        e_l2 = self.encoder2(dense)
+        e_l2 = self.dense_encoder(dense)
+        
+        e_l1 = e_l1.unsqueeze(1)
+        e_l2 = e_l2.unsqueeze(1)
+        
+        # print(f"e_l1.shape = {e_l1.shape}")
+        # print(f"e_l2.shape = {e_l2.shape}")
+        #################
+        # 원본은 dim=2
         e_l = torch.cat((e_l1,e_l2), dim=2)
 
         #e_l1_gt = self.encoder1(sparse_gt) # Pass exteroceptive information through encoder

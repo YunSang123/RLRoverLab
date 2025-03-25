@@ -13,13 +13,13 @@ from isaaclab.app import AppLauncher      # Omniverse Isaac Sim을 실행하는 
 
 # add argparse arguments
 parser = argparse.ArgumentParser("Welcome to Orbit: Omniverse Robotics Environments!")
-parser.add_argument("--load", action="store_true", default=True, help="Load previous trained agent.pt")
+parser.add_argument("--load", action="store_true", default=False, help="Load previous trained agent.pt")
 parser.add_argument("--headless", action="store_true", default=True, help="Force display off at all times.")           # GUI 없이 실행
 parser.add_argument("--video", action="store_true", default=False, help="Record videos during training.")               # 학습 중 비디오 녹화 여부
 parser.add_argument("--video_length", type=int, default=2000, help="Length of the recorded video (in steps).")           # 비디오 길이 설정.
 parser.add_argument("--video_interval", type=int, default=2000, help="Interval between video recordings (in steps).")   # 비디오 녹화 간격.
 parser.add_argument("--cpu", action="store_true", default=False, help="Use CPU pipeline.")                              # CPU 모드에서 실행 여부.
-parser.add_argument("--num_envs", type=int, default=1, help="Number of environments to simulate.")                      # 시뮬레이션 환경 개수
+parser.add_argument("--num_envs", type=int, default=512, help="Number of environments to simulate.")                      # 시뮬레이션 환경 개수
 parser.add_argument("--task", type=str, default="AAURoverEnv-v0", help="Name of the task.")                             # 수행할 환경 이름
 parser.add_argument("--seed", type=int, default=None, help="Seed used for the environment")                             # 난수 생성 시드
 parser.add_argument("--agent", type=str, default="PPO", help="Name of the agent.")                                      # 사용할 에이전트 알고리즘

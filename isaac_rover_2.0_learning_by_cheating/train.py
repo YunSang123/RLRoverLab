@@ -11,6 +11,7 @@ import datetime
 import wandb
 import os
 import math
+import gc
 
 class Trainer():
     def __init__(self, cfg,wandb_name):
@@ -21,7 +22,6 @@ class Trainer():
         self.LEARNING_RATE = cfg_hyperparameters["learning_rate"] # original 1e-4
         self.NUM_EPOCHS = cfg_hyperparameters["epochs"]
         self.BATCH_SIZE = cfg_hyperparameters["batch_size"]
-        
         self.RUN_NAME = "TEST"
         self.wandb_group = "test-group"
         time_str = datetime.datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
@@ -48,7 +48,7 @@ class Trainer():
             targets_ex = targets_ex.float().to(device=self.DEVICE)
 
             horizon = 50
-            
+            # print(f"data.shape[1] = {data.shape}")
             for i in range(math.floor(data.shape[1]/horizon)):
                 actions = torch.zeros(self.BATCH_SIZE,horizon, 2,device='cuda:0')
                 predictions = torch.zeros(self.BATCH_SIZE,horizon, data.shape[2]-7,device='cuda:0')
@@ -94,10 +94,12 @@ class Trainer():
                 total_loss_benchmark += loss_benchmark  
                 h = h.detach()
                 data = data.detach()
-                
+                # print(f"predictions.shape = {predictions.shape}")
                 if i == (math.floor(data.shape[1]/horizon)-1):
-                    print(i)
-                    if batch_idx == 7:
+                    # print(i)
+                    if batch_idx == 63:
+                        print("predictions.shape은 다음과 같음.")
+                        print(predictions.shape)
                         torch.save(predictions[1,30,:].detach(),"predictions.pt")
                         torch.save(data[1,30,7:].detach(),"input.pt")
                         torch.save(targets_ex[1,30,:].detach(),"targets.pt")
@@ -105,15 +107,21 @@ class Trainer():
                         print("Predictions", predictions[1,30,60:70].detach())
                         print("GT: ", targets_ex[1,30,60:70].detach()) # [num_robots, timestep, observations]
                         print("Pred Sum", torch.abs(predictions[0,30]).sum())      
-    
+            
+            # 메모리 정리용
+            del data, targets_ac, targets_ex, actions, predictions
+            gc.collect()
+            torch.cuda.empty_cache()
+            torch.cuda.ipc_collect()
+            print(f"RAM, VRAM 정리!")
         return total_loss, total_be_loss, total_re_loss, total_loss_benchmark
 
     def train(self):
         wandb.init(project='isaac-rover-2.0-learning-by-cheating', sync_tensorboard=True,name=self.wandb_name,group=self.wandb_group, entity="inside-out-anger-jys-inha-university")
         train_ds = TeacherDataset("teacher_model/")
-        train_loader = DataLoader(train_ds,batch_size=self.BATCH_SIZE,num_workers=1,pin_memory=True, shuffle=False)
+        train_loader = DataLoader(train_ds,batch_size=self.BATCH_SIZE,num_workers=0,pin_memory=False, shuffle=False)
         
-        model = Student(info=train_ds.get_info(), cfg=self.cfg, teacher="teacher_model/osr_740k.pt").to(self.DEVICE)
+        model = Student(info=train_ds.get_info(), cfg=self.cfg, teacher="teacher_model/agent_100.pt").to(self.DEVICE)
         loss_fn = {
             "behaviour":     nn.MSELoss(reduction="mean"),
             "recontruction": nn.MSELoss(reduction="mean")
@@ -145,6 +153,7 @@ class Trainer():
         best = float('inf')
 
         for epoch in range(0,self.NUM_EPOCHS):
+            print(f"epoch = {epoch+1}")
             self.epoch = epoch
             loss, loss_be, loss_re, loss_benchmark = self.train_fn(train_loader, model, optimizer, loss_fn, scaler)
             # print(loss_be/len(train_loader))
@@ -194,12 +203,14 @@ def cfg_fn():
         },
         "learning":{
             "learning_rate": 1e-4,
-            "epochs": 5,
-            "batch_size": 8,
+            "epochs": 5,        # tmp = 5
+            "batch_size": 64,    # batch_size = 8
         },
-        "encoder":{
+        "conv_encoder":{
             "activation_function": "leakyrelu",
-            "encoder_features": [1500,1000]},
+            "encoder_features": [8,16,32,64],
+            "output_size": 60,
+        },
 
         "belief_encoder": {
             "hidden_dim":       300,
@@ -226,7 +237,7 @@ def train():
         
         wandb_group = f"test"
         #wandb_group = "test-group"
-        wandb_name = f"test7"
+        wandb_name = f"test{i+1}"
 
         wandb.init(project='isaac-rover-2.0-learning-by-cheating', sync_tensorboard=True, name=wandb_name, group=wandb_group, entity="inside-out-anger-jys-inha-university")
         cfg = cfg_fn()

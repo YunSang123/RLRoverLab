@@ -118,6 +118,8 @@ class Trainer():
 
     def train(self):
         wandb.init(project='isaac-rover-2.0-learning-by-cheating', sync_tensorboard=True,name=self.wandb_name,group=self.wandb_group, entity="inside-out-anger-jys-inha-university")
+        
+        # train_dataset임
         train_ds = TeacherDataset("teacher_model/")
         train_loader = DataLoader(train_ds,batch_size=self.BATCH_SIZE,num_workers=0,pin_memory=False, shuffle=False)
         
@@ -203,8 +205,8 @@ def cfg_fn():
         },
         "learning":{
             "learning_rate": 1e-4,
-            "epochs": 5,        # tmp = 5
-            "batch_size": 64,    # batch_size = 8
+            "epochs": 20,        # tmp = 5
+            "batch_size": 32,    # batch_size = 8
         },
         "conv_encoder":{
             "activation_function": "leakyrelu",
@@ -231,7 +233,7 @@ def cfg_fn():
     return cfg
 
 def train():
-    for i in range(5):
+    for i in range(1):
         time_str = datetime.datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
         
         
@@ -240,6 +242,9 @@ def train():
         wandb_name = f"test{i+1}"
 
         wandb.init(project='isaac-rover-2.0-learning-by-cheating', sync_tensorboard=True, name=wandb_name, group=wandb_group, entity="inside-out-anger-jys-inha-university")
+        
+        # configuration about student policy network
+        # cfg = 딕셔너리
         cfg = cfg_fn()
         sweep=False
         if sweep:

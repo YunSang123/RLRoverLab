@@ -26,14 +26,14 @@ class TeacherDataset(Dataset):
 
         self.heightmap_coordinates = self.heightmap.get_coordinates()
         
-        self.timesteps = self.data["data"].shape[0] 
-
+        self.timesteps = self.data["data"].shape[0]
         
     def __len__(self):
         return self.data["data"].shape[1]
     
     # Index is the robot instance.
     def __getitem__(self, index):
+        print(f"{index+1}번째 getitem 함수 실행")
         #print(index)
         max_delay = 0
         info = self.get_info()
@@ -75,6 +75,7 @@ class TeacherDataset(Dataset):
         return data, gt_ac, gt_ex
 
     def add_noise(self, gt):
+        # print(f"add_noise 함수 실행")
         # starting with index 3: 0: reset bit 1: action1 2: action2
         noisy_data = gt.clone()
         # dist2goal
@@ -105,6 +106,7 @@ class TeacherDataset(Dataset):
         return noisy_data
 
     def get_noise_mode(self):
+        # print(f"get_noise 함수 실행")
         noise_mode = {}
         r = random.random()
         if r <= 0.6:
@@ -137,6 +139,7 @@ class TeacherDataset(Dataset):
         return noise_mode
 
     def create_rand_tensor(self, dev, shape, add_offset=False, offset=0, is_offset_dev=False, offset_dev=0.0, device="cpu"):
+        # print(f"create_rand_tensor 함수 실행")
         # not possible to move height points on xy plane
         
         rand = torch.empty(shape, device=device).normal_(mean=0,std=dev)
@@ -155,16 +158,19 @@ class TeacherDataset(Dataset):
         return rand
 
     def simulate_missing_height_points(self, heights, missing_point_probability):
+        # print(f"simulate_missing_height_points 실행")
         rand = torch.rand(heights.shape)
         new_heights = torch.where(rand <= missing_point_probability, 0, heights)
         return new_heights
     
     def get_info(self):
+        # print(f"get_info 실행")
         # print("KEYS ", self.data["info"].keys())
         return self.data["info"]
 
     # Add large gaussian noise to data.
     def add_large_noise(self, data):
+        # print(f"add_large_noise 실행")
 
         # Generate large hole coordinates
         num_large_gaussian = 3
@@ -186,6 +192,7 @@ class TeacherDataset(Dataset):
 
     # Generate moving occlusions
     def add_occlusions(self, data):
+        # print(f"add_occlusions 실행")
         num_moving_occlusions = 1 # MUST BE 1! Otherwise the code doesn't work...
 
         # Check the ammount of points that each rover has
@@ -217,6 +224,7 @@ class TeacherDataset(Dataset):
     
     # Generate x random points for each instance, distributed within the heightmap view.
     def random_points(self, num_points):
+        # print(f"random_points 실행")
 
         # Generate the point coordinates from a random uniform distribution within specified boundaries
         x = torch.FloatTensor(1, num_points).uniform_(-2, 2).expand(1, -1,-1)
@@ -232,7 +240,7 @@ class TeacherDataset(Dataset):
 
     # Generate a random point for X instances, distributed outside the heightmap view.
     def random_points_outside(self, num_points):
-
+        # print(f"random_points_outside 실행")
         # Generate the point coordinates from a random uniform distribution
         x = torch.FloatTensor(1, num_points).uniform_(-2, 2)
         y = torch.FloatTensor(1, num_points).uniform_(0, 3.5)
@@ -250,7 +258,7 @@ class TeacherDataset(Dataset):
         return rand_points  # Return [num_instances, 2(x,y)] tensor
 
     def random_directions(self, num_directions):
-
+        # print(f"random_directions 실행")
         # Genereate af random direction for each instance. 0.055 m/timestep is physical maximum speed for the rover.
         x = torch.FloatTensor(1, num_directions).uniform_(-0.06, 0.06)
         y = torch.FloatTensor(1, num_directions).uniform_(-0.06, 0.06)
@@ -262,7 +270,7 @@ class TeacherDataset(Dataset):
 
     # Calculate the distance from a single point in each instance heightmap-view(probably 128 of them) to each heightmap point.
     def grid_dist_to_points(self, points):
-
+        # print(f"grid_dist_to_points 실행")
         a = points # The origin points
         b = self.heightmap_coordinates[:,:2] # The points to measure distance to the "origin points"
 
@@ -274,6 +282,7 @@ class TeacherDataset(Dataset):
 
     # Apply the function of a gaussian hole to the grid_dist points.
     def gaussian_hole(self, dists, variance):
+        # print(f"gaussian_hole 실행")
 
         # Gaussian function
         Gaussian = 1/(variance*torch.sqrt(torch.tensor([3.141592]))) * torch.exp(-1/2 * (dists*dists)/(variance*variance))
@@ -282,7 +291,7 @@ class TeacherDataset(Dataset):
 
     # Apply the occlusion function to the grid_dist points. Dist sets the distance threshold for occlusion/not occlusion.
     def occlusion(self, dist, inflation):
-        
+        # print(f"occlusion 실행")
         # Distance funcion. True when not occluded, False when occluded.
         occluded = torch.where(dist > inflation, torch.ones_like(dist), torch.zeros_like(dist))
 
@@ -290,6 +299,7 @@ class TeacherDataset(Dataset):
 
     # Move points in a random direction
     def move_points(self, points, directions):
+        # print(f"move_points 실행")
         return points + directions
 
     

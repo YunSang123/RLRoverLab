@@ -7,22 +7,24 @@ import torch
 import operator
 import numpy as np
 import math
+import csv
 
 class Heightmap():
     def __init__(self, device='cuda:0'):
         self.device = device
         
         # Define the borders of the area using lines. Define where points should be with respect to line.
-        self.coarse_border = [[[1.220,0.118],[4.4455,3.150],'over'],[[-1.220,0.118],[-4.4455,3.150],'over'],[[1.220,0.118],[-1.220,0.118],'over']] 
+        # self.coarse_border = [[[1.220,0.118],[4.4455,3.150],'over'],[[-1.220,0.118],[-4.4455,3.150],'over'],[[1.220,0.118],[-1.220,0.118],'over']]  # tmp
+        self.coarse_border = [[[1.0,1.0],[1.0, -1.0],'left'],[[-1.005,1.005],[-1.005,-1.005],'right'],[[-1.005,-1.005],[1.005,-1.005],'over'],[[1.005,1.005],[-1.005,1.005],'below']]
         self.coarse_radius = 3.5
 
-        self.fine_border = [[[1.0,0.118],[1.0,0.119],'left'],[[-1.0,0.118],[-1.0,0.119],'right'],[[1.0,0.118],[-1.0,0.118],'over'],[[1.0,1.400],[-1.0,1.400],'below']]
+        self.fine_border = [[[0.5,0.5],[0.5,-0.5],'left'],[[-0.5005,0.505],[-0.505,-0.505],'right'],[[-0.505,-0.505],[0.505,-0.505],'over'],[[0.505,0.505],[-0.505,0.505],'below']]
         self.fine_radius = 1.2
 
         self.beneath_border = [[[0.32,0],[0.320,1],'left'],[[-0.320,0],[-0.320,1],'right'],[[-0.320,-0.5],[0.320,-0.5],'over'],[[-0.320,0.6],[0.320,0.6],'under']] 
 
-        self.delta_coarse = 0.15        # sparse
-        self.delta_fine = 0.05          # dense
+        self.delta_coarse = 0.1        # sparse
+        self.delta_fine = 0.04          # dense
         
         self.see_beneath = False
         self.HD_enabled = True
@@ -34,16 +36,25 @@ class Heightmap():
         print("Heigthmap created of size: ", self.distribution.size())
 
         #self.calculate_grids() # Create the heightmap in a grid
+        
+    def write_csv(self, point_distribution):
+        with open("point_distribution.csv", mode="w", newline="") as file:
+            writer = csv.writer(file)
+            writer.writerow(["x", "y", "z"])  # 헤더
+            writer.writerows(point_distribution)
+
+        print("Saved point_distribution.csv")
 
     def heightmap_distribution(self, plot=False):
         
-        point_distribution = []
+        point_distribution = [] # []이므로 리스트, ()이면 튜플
 
         coarse_idx = []
         fine_idx = []
         beneath_idx = []
 
-        # The coarse map
+        # The coarse(sparse) map
+        # sparse map 제작
         y = -10
         while y < 10:
         
@@ -51,21 +62,27 @@ class Heightmap():
             
             while x < 10:
                 x += self.delta_coarse
-                if self._inside_borders([x, y], self.coarse_border) and self._inside_circle([x, y], [0,0], self.coarse_radius): # REMEMBER TO CHANGE BELOW
+                if self._inside_borders([x, y], self.coarse_border): # and self._inside_circle([x, y], [0,0], self.coarse_radius): # REMEMBER TO CHANGE BELOW
                     point_distribution.append([x, y, self.z_offset])
 
             y += self.delta_coarse
-
+        
+        # self.write_csv(point_distribution)
+        
         for idx, point in enumerate(point_distribution):
-            if self._inside_borders(point[0:2], self.coarse_border) and self._inside_circle(point[0:2], [0,0], self.coarse_radius): # REMEMBER TO CHANGE ABOVE
+            if self._inside_borders(point[0:2], self.coarse_border): # and self._inside_circle(point[0:2], [0,0], self.coarse_radius): # REMEMBER TO CHANGE ABOVE
                 coarse_idx.append(idx)
+        
+        # print(f"coarse_idx 출력중!")
+        # print(coarse_idx)
 
-        # The fine map
+        # The fine(dense) map
+        # dense map 제작
         if self.HD_enabled:
-            y = -10
+            y = -0.54
             while y < 10:
             
-                x = -10
+                x = -0.54
                 
                 while x < 10:
                     x += self.delta_fine
@@ -74,12 +91,21 @@ class Heightmap():
                             point_distribution.append([x, y, self.z_offset])
 
                 y += self.delta_fine
+                
+            # print(f"dense map 제작하고 난 뒤에 point_distribution 크기: {len(point_distribution)}")
 
             for idx, point in enumerate(point_distribution):
-                if self._inside_borders(point[0:2], self.fine_border): # REMEMBER TO CHANGE ABOVE
-                    fine_idx.append(idx)
+                if idx >= len(coarse_idx):
+                    if self._inside_borders(point[0:2], self.fine_border): # REMEMBER TO CHANGE ABOVE
+                        fine_idx.append(idx)
+                    
+        print(f"fine_idx 출력중!")
+        print(fine_idx)
 
+        # self.write_csv(point_distribution)
+        
         # Points underneath belly pan
+        # self.see_beneath가 False여서 실행되진 않음.
         if self.see_beneath:
             y = -10
             while y < 10:
@@ -98,16 +124,19 @@ class Heightmap():
                 if self._inside_borders(point[0:2], self.beneath_border) and self._inside_circle(point[0:2], [0,0], self.fine_radius): # REMEMBER TO CHANGE ABOVE
                     beneath_idx.append(idx)
 
+        # self.write_csv(point_distribution)
 
+        # point_distribution의 모든 숫자들을 소수점 네 자리까지 반올림
         point_distribution = np.round(point_distribution, 4)
 
+        # point_distribution을 tensor로 변환
         p_distribution = torch.tensor(point_distribution, device=self.device)
 
         #Swap X and Y axes - They are different in simulation
         self.distribution = torch.index_select(p_distribution, 1, torch.tensor([1,0,2], device=self.device))
 
-        self.coarse_idx = torch.tensor(coarse_idx, device=self.device)
-        self.fine_idx = torch.tensor(fine_idx, device=self.device)
+        self.coarse_idx = torch.tensor(coarse_idx, device=self.device)      # self.coarse_idx 크기 = 441
+        self.fine_idx = torch.tensor(fine_idx, device=self.device)          # self.fine_idx 크기 = 797
         self.beneath_idx = torch.tensor(beneath_idx, device=self.device)
 
         if plot == True:
@@ -115,6 +144,8 @@ class Heightmap():
             ax.scatter(point_distribution[:,0], point_distribution[:,1])
             ax.set_aspect('equal')
             plt.show()
+        
+        # self.write_csv(point_distribution)
 
     def _get_depth_from_idx(self, idx, rays):
         return rays[:,idx]
@@ -154,9 +185,10 @@ class Heightmap():
 
     def get_coordinates(self):
         idxs = torch.cat((self.coarse_idx, self.fine_idx),0)
-        return self.distribution[idxs[:1117]]
+        return self.distribution[idxs]
         # return self.distribution[idxs] # 원래 코드
 
+# borderLines = self.coarse_border = [[[1.220,0.118],[4.4455,3.150],'over'],[[-1.220,0.118],[-4.4455,3.150],'over'],[[1.220,0.118],[-1.220,0.118],'over']]
     def _inside_borders(self, point, borderLines):
 
         x, y = point
@@ -164,6 +196,7 @@ class Heightmap():
         passCondition = True
 
         for line in borderLines:
+            # a = borderLines의 기울기를 구하는 것!
             a = np.subtract(line[0],line[1])
             if a[0] == 0:
                 a = float("inf")

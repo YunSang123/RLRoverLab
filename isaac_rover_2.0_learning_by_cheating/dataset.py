@@ -15,14 +15,12 @@ class TeacherDataset(Dataset):
 
         # Import data and setup variables
         sort_data(data_dir)
-        self.data = torch.load(data_dir + "data.pt", map_location='cpu')
-        print(f"self.data.shape = {self.data['data'].shape}")
-        # self.data = torch.load(data_dir + "data.pt")
+        # self.data = torch.load(data_dir + "data.pt", map_location='cpu')
+        self.data = torch.load(data_dir + "data.pt")
         # print("self.data 출력중!\n"*10)
         # print(self.data)
-
         # self.remove_idx = torch.load('remove_idx.pt').to('cpu')
-        self.heightmap = Heightmap('cpu')
+        self.heightmap = Heightmap()
 
         self.heightmap_coordinates = self.heightmap.get_coordinates()
         
@@ -33,12 +31,13 @@ class TeacherDataset(Dataset):
     
     # Index is the robot instance.
     def __getitem__(self, index):
-        print(f"{index+1}번째 getitem 함수 실행")
+        # print(f"{index+1}번째 getitem 함수 실행")
         #print(index)
         max_delay = 0
         info = self.get_info()
         gt = self.data["data"][:, index]
-        data = self.add_noise(gt)
+        data = self.add_noise(gt)   # GPU에 로드
+        
         # shift actions to simulate random delay for whole rover
         delay = random.randint(0, max_delay)
         
@@ -78,8 +77,10 @@ class TeacherDataset(Dataset):
         # print(f"add_noise 함수 실행")
         # starting with index 3: 0: reset bit 1: action1 2: action2
         noisy_data = gt.clone()
+        # print(f"noisy_data = {noisy_data}")
         # dist2goal
         noise = self.create_rand_tensor(0.0, noisy_data[:, 3].shape)
+        # print(f"noise = {noise}")
         noisy_data[:, 3] = torch.add(noisy_data[:, 3], noise)
         # heading2goal
         noise = self.create_rand_tensor(0.0, noisy_data[:, 4].shape)
@@ -138,7 +139,7 @@ class TeacherDataset(Dataset):
             noise_mode["missing_points_prob"] = 0.2
         return noise_mode
 
-    def create_rand_tensor(self, dev, shape, add_offset=False, offset=0, is_offset_dev=False, offset_dev=0.0, device="cpu"):
+    def create_rand_tensor(self, dev, shape, add_offset=False, offset=0, is_offset_dev=False, offset_dev=0.0, device='cuda:0'):
         # print(f"create_rand_tensor 함수 실행")
         # not possible to move height points on xy plane
         
@@ -157,9 +158,9 @@ class TeacherDataset(Dataset):
                 torch.add(rand, offset)
         return rand
 
-    def simulate_missing_height_points(self, heights, missing_point_probability):
+    def simulate_missing_height_points(self, heights, missing_point_probability, device='cuda:0'):
         # print(f"simulate_missing_height_points 실행")
-        rand = torch.rand(heights.shape)
+        rand = torch.rand(heights.shape, device=device)
         new_heights = torch.where(rand <= missing_point_probability, 0, heights)
         return new_heights
     
@@ -170,7 +171,6 @@ class TeacherDataset(Dataset):
 
     # Add large gaussian noise to data.
     def add_large_noise(self, data):
-        # print(f"add_large_noise 실행")
 
         # Generate large hole coordinates
         num_large_gaussian = 3
@@ -192,7 +192,6 @@ class TeacherDataset(Dataset):
 
     # Generate moving occlusions
     def add_occlusions(self, data):
-        # print(f"add_occlusions 실행")
         num_moving_occlusions = 1 # MUST BE 1! Otherwise the code doesn't work...
 
         # Check the ammount of points that each rover has
@@ -227,8 +226,8 @@ class TeacherDataset(Dataset):
         # print(f"random_points 실행")
 
         # Generate the point coordinates from a random uniform distribution within specified boundaries
-        x = torch.FloatTensor(1, num_points).uniform_(-2, 2).expand(1, -1,-1)
-        y = torch.FloatTensor(1, num_points).uniform_(0, 3.5).expand(1, -1,-1)
+        x = torch.FloatTensor(1, num_points).uniform_(-2, 2).to('cuda:0').expand(1, -1,-1)
+        y = torch.FloatTensor(1, num_points).uniform_(0, 3.5).to('cuda:0').expand(1, -1,-1)
 
         # Concatenate the individual coordinates to a combined matrix of coordinates
         rand_points = torch.cat((x,y), 0)
@@ -242,11 +241,11 @@ class TeacherDataset(Dataset):
     def random_points_outside(self, num_points):
         # print(f"random_points_outside 실행")
         # Generate the point coordinates from a random uniform distribution
-        x = torch.FloatTensor(1, num_points).uniform_(-2, 2)
-        y = torch.FloatTensor(1, num_points).uniform_(0, 3.5)
+        x = torch.FloatTensor(1, num_points).uniform_(-2, 2).to('cuda:0')
+        y = torch.FloatTensor(1, num_points).uniform_(0, 3.5).to('cuda:0')
 
         # Generate bool for placement of border point. True is on the left and right edge. False is on the front and rear edge.
-        side = torch.FloatTensor(1, 1).uniform_() > 0.5
+        side = torch.FloatTensor(1, 1).uniform_().to('cuda:0') > 0.5
 
         # Set x and y coordinates based on side boolean variable.
         x = torch.where(side, torch.where(x < 0, -1.99, 1.99), x)
@@ -260,8 +259,8 @@ class TeacherDataset(Dataset):
     def random_directions(self, num_directions):
         # print(f"random_directions 실행")
         # Genereate af random direction for each instance. 0.055 m/timestep is physical maximum speed for the rover.
-        x = torch.FloatTensor(1, num_directions).uniform_(-0.06, 0.06)
-        y = torch.FloatTensor(1, num_directions).uniform_(-0.06, 0.06)
+        x = torch.FloatTensor(1, num_directions).uniform_(-0.06, 0.06).to('cuda:0')
+        y = torch.FloatTensor(1, num_directions).uniform_(-0.06, 0.06).to('cuda:0')
 
         # Concatenate the individual coordinates to a combined matrix of directions
         rand_directions = torch.cat((x, y), 1)
@@ -270,7 +269,6 @@ class TeacherDataset(Dataset):
 
     # Calculate the distance from a single point in each instance heightmap-view(probably 128 of them) to each heightmap point.
     def grid_dist_to_points(self, points):
-        # print(f"grid_dist_to_points 실행")
         a = points # The origin points
         b = self.heightmap_coordinates[:,:2] # The points to measure distance to the "origin points"
 
@@ -285,7 +283,7 @@ class TeacherDataset(Dataset):
         # print(f"gaussian_hole 실행")
 
         # Gaussian function
-        Gaussian = 1/(variance*torch.sqrt(torch.tensor([3.141592]))) * torch.exp(-1/2 * (dists*dists)/(variance*variance))
+        Gaussian = 1/(variance*torch.sqrt(torch.tensor([3.141592], device='cuda:0'))) * torch.exp(-1/2 * (dists*dists)/(variance*variance))
 
         return Gaussian # Return [128, 1746] tensor
 

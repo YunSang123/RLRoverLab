@@ -99,8 +99,8 @@ class Heightmap():
                     if self._inside_borders(point[0:2], self.fine_border): # REMEMBER TO CHANGE ABOVE
                         fine_idx.append(idx)
                     
-        print(f"fine_idx 출력중!")
-        print(fine_idx)
+        # print(f"fine_idx 출력중!")
+        # print(fine_idx)
 
         # self.write_csv(point_distribution)
         

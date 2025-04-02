@@ -157,7 +157,7 @@ def main():
     # Get the checkpoint path from the experiment configuration
     print(f'args_cli.task: {args_cli.task}')
     # agent_policy_path = gym.spec(args_cli.task).kwargs.pop("best_model_path") # tmp
-    agent_policy_path = "./load/agent_100.pt"
+    agent_policy_path = "./load/agent_610k.pt"
     print("agent_policy_path : ", agent_policy_path)
     
     agent.load(agent_policy_path)

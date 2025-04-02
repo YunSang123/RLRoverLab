@@ -27,20 +27,20 @@ class Trainer():
         time_str = datetime.datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
         #self.wandb_name = f"test-run_{time_str}"
         self.wandb_name = wandb_name
-
+        
+        # pre-trained된 student policy model을 load해서 이어서 학습할건지?
+        self.load = True
 
     def train_fn(self, train_loader, model, optimizer, loss_fn, scaler):
         loop = tqdm(train_loader)
+        
         #TODO add metrics
         total_loss = 0
         total_be_loss = 0
         total_re_loss = 0
         total_loss_benchmark = 0
         
-        #print(1)
         for batch_idx, (data, targets_ac, targets_ex) in enumerate(loop):
-
-            #print("hej")
             data = data.to(device=self.DEVICE)
             h = model.belief_encoder.init_hidden(self.BATCH_SIZE).to(self.DEVICE)
             #TODO format target to be in the correct format
@@ -48,30 +48,27 @@ class Trainer():
             targets_ex = targets_ex.float().to(device=self.DEVICE)
 
             horizon = 50
-            # print(f"data.shape[1] = {data.shape}")
+            
             for i in range(math.floor(data.shape[1]/horizon)):
                 actions = torch.zeros(self.BATCH_SIZE,horizon, 2,device='cuda:0')
                 predictions = torch.zeros(self.BATCH_SIZE,horizon, data.shape[2]-7,device='cuda:0')
-                # print(predictions.shape)
-                # print(targets_ex[:,i:i+800].shape)
-                # print(data[:,i:i+800,7:].shape)
                 
+                # 목적 : GPU memory 절약 + 연산 속도 향상을 위해 사용
+                # 기능 : float32대신 일부 연산을 float16으로 자동 변환해서 실행
                 with torch.cuda.amp.autocast():
                     actions = torch.zeros(self.BATCH_SIZE,horizon, 2,device='cuda:0')
                     predictions = torch.zeros(self.BATCH_SIZE,horizon, data.shape[2]-7,device='cuda:0')
-                    #actions, predictions, h = model(data,h)
-
+                    
                     for j in range(horizon):
-
                         a,p,h = model(data[:,j+i*horizon].unsqueeze(1),h)
                         actions[:,j,:]  = a.squeeze()
                         predictions[:,j,:] = p.squeeze() # [num_robots, timestep, observations]
-
-                        data[:,j+i*horizon+1,5:7] = actions[:,j].clone()/3
-
-                   # print("nu")
-                   # print(actions.shape)
-                    #print(targets_ac[:,i*horizon:i*horizon+horizon].shape)
+                        data[:,j+i*horizon+1,5:7] = actions[:,j].clone()
+                    del a,p
+                    gc.collect()
+                    
+                    # behavior = actions
+                    # reconstruction = exteroceptions
                     loss_be = loss_fn["behaviour"](actions, targets_ac[:,i*horizon:i*horizon+horizon])
                     loss_re = loss_fn["recontruction"](predictions, targets_ex[:,i*horizon:i*horizon+horizon])
                     loss_benchmark = loss_fn["recontruction"](data[:,i*horizon:i*horizon+horizon,7:],targets_ex[:,i*horizon:i*horizon+horizon])
@@ -80,13 +77,13 @@ class Trainer():
                         "Behaviour loss": loss_be,
                         "Reconstruction loss": loss_re,
                         "Benchmark loss": loss_benchmark},)
+                
                 # backward
-                optimizer.zero_grad()
+                optimizer.zero_grad()                               # gradient를 0으로 초기화
                 scaler.scale(loss).backward(retain_graph=False)
                 scaler.step(optimizer)
-                scaler.update()
+                scaler.update()                                     # 가중치 업데이트
                 loop.set_postfix(loss=loss.item())
-                
 
                 total_loss += loss.item() / math.floor(data.shape[1]/horizon)
                 total_be_loss += loss_be / math.floor(data.shape[1]/horizon)
@@ -106,14 +103,13 @@ class Trainer():
                         print("noisey", data[1,30,67:77].detach())
                         print("Predictions", predictions[1,30,60:70].detach())
                         print("GT: ", targets_ex[1,30,60:70].detach()) # [num_robots, timestep, observations]
-                        print("Pred Sum", torch.abs(predictions[0,30]).sum())      
+                        print("Pred Sum", torch.abs(predictions[0,30]).sum())
             
-            # 메모리 정리용
             del data, targets_ac, targets_ex, actions, predictions
             gc.collect()
             torch.cuda.empty_cache()
             torch.cuda.ipc_collect()
-            print(f"RAM, VRAM 정리!")
+            print(f"RAM, VRAM 정리 완료!")
         return total_loss, total_be_loss, total_re_loss, total_loss_benchmark
 
     def train(self):
@@ -123,7 +119,7 @@ class Trainer():
         train_ds = TeacherDataset("teacher_model/")
         train_loader = DataLoader(train_ds,batch_size=self.BATCH_SIZE,num_workers=0,pin_memory=False, shuffle=False)
         
-        model = Student(info=train_ds.get_info(), cfg=self.cfg, teacher="teacher_model/agent_100.pt").to(self.DEVICE)
+        model = Student(info=train_ds.get_info(), cfg=self.cfg, teacher="teacher_model/agent_610k.pt").to(self.DEVICE)
         loss_fn = {
             "behaviour":     nn.MSELoss(reduction="mean"),
             "recontruction": nn.MSELoss(reduction="mean")
@@ -153,11 +149,21 @@ class Trainer():
 
         # Metric for best policy
         best = float('inf')
+        
+        ###################################################
+        # load pre-trained student policy model to continue training
+        if self.load == True:
+            load_student_model = torch.load("load/best_6epoch_8batchsize_1e-4lr.pt")["state_dict"]
+            model.load_state_dict(load_student_model)
+            print("Student model loaded successfully!")
+        ###################################################
 
         for epoch in range(0,self.NUM_EPOCHS):
             print(f"epoch = {epoch+1}")
             self.epoch = epoch
             loss, loss_be, loss_re, loss_benchmark = self.train_fn(train_loader, model, optimizer, loss_fn, scaler)
+            print(f"train_fn 끝!")
+            
             # print(loss_be/len(train_loader))
             # print(loss_re/len(train_loader))
              # Reset hidden units after each epoch
@@ -173,8 +179,10 @@ class Trainer():
 
             if loss < best:
                 print("Best model found => saving")
+                print(f"loss: {loss}, best: {best}")
                 best = loss
                 self.save_checkpoint(checkpoint,self.wandb_name)
+            gc.collect()
 
             # TODO add stuff to wandb or tensorboard
             # wandb.log({"Loss": loss/len(train_loader),
@@ -204,9 +212,9 @@ def cfg_fn():
             "exteroceptive":    0,
         },
         "learning":{
-            "learning_rate": 1e-4,
-            "epochs": 20,        # tmp = 5
-            "batch_size": 32,    # batch_size = 8
+            "learning_rate": 1e-5,
+            "epochs": 1,        # tmp = 5
+            "batch_size": 8,    # batch_size = 8
         },
         "conv_encoder":{
             "activation_function": "leakyrelu",

@@ -207,7 +207,7 @@ class TerminationsCfg:
     time_limit = DoneTerm(func=mdp.time_out, time_out=True)
     is_success = DoneTerm(
         func=mdp.is_success,
-        params={"command_name": "target_pose", "threshold": 0.18},
+        params={"command_name": "target_pose", "threshold": 0.5},
     )
     far_from_target = DoneTerm(
         func=mdp.far_from_target,

@@ -193,12 +193,12 @@ class Belief_Encoder(nn.Module):
         ga_features = cfg["ga_features"]                        # [128,128,120]
 
         in_channels = self.hidden_dim                           # 300
-        for feature in gb_features:
+        for feature in gb_features:                             # [128,128,120]
             self.gb.append(Layer(in_channels, feature, activation_function))
             in_channels = feature
         
-        in_channels = self.hidden_dim
-        for feature in ga_features:
+        in_channels = self.hidden_dim                           # 300
+        for feature in ga_features:                             # [128,128,120]
             self.ga.append(Layer(in_channels, feature, activation_function))
             in_channels = feature
 
@@ -337,7 +337,7 @@ class Student(nn.Module):
         # for k, v in teacher_policy.items():
         #     print(k)
             # print(v)
-            
+        
         # Filter out encoder to only maintain network MLP
         mlp_params = {k: v for k,v in teacher_policy.items() if (k.startswith("mlp") or "log_std_parameter" in k)}
         sparse_encoder_params = {k[15:]: v for k,v in teacher_policy.items() if "sparse_encoder" in k}

@@ -38,14 +38,14 @@ class HeightmapEncoder(nn.Module):
 
 class ConvHeightmapEncoder(nn.Module):
     def __init__(self, in_channels, encoder_features=[16, 32], encoder_activation="leaky_relu"):
-        print("in_channels = ", in_channels)                        # 10201
-        print("encoder_features = ", encoder_features)              # 8, 16, 32, 64
-        print("encoder_activation = ", encoder_activation)          # leaky_relu
+        # print("in_channels = ", in_channels)                        # 10201
+        # print("encoder_features = ", encoder_features)              # 8, 16, 32, 64
+        # print("encoder_activation = ", encoder_activation)          # leaky_relu
         super().__init__()
         # self.heightmap_size는 rover_env_cfg.py에서 height_scanner의 size의 제곱근과 같음. Ex) resolution=0.05, size=[5.0, 5.0] 이라고 하면, 한 변이 101개이므로, self.heightmap_size는 101이 나옴.
         self.heightmap_size = torch.sqrt(torch.tensor(in_channels)).int()   # tensor(101, dtype=torch.int32)
         
-        print("self.heightmap_size = ",self.heightmap_size)         # tensor(101, dtype=torch.int32)
+        # print("self.heightmap_size = ",self.heightmap_size)         # tensor(101, dtype=torch.int32)
         # kernel = 가중치 필터
         kernel_size = 3
         
@@ -107,15 +107,15 @@ class ConvHeightmapEncoder(nn.Module):
         for _ in encoder_features:
             # Conv2D 레이어를 거치면 아래와 같이 너비와 높이가 변함.
             w = (flatten_size[0] - kernel_size + 2 * padding) // stride + 1
-            print("w = ", w)
+            # print("w = ", w)
             h = (flatten_size[1] - kernel_size + 2 * padding) // stride + 1
-            print("h = ", h)
+            # print("h = ", h)
             
             # Conv2D 레이어를 거치면 아래와 같이 너비와 높이가 변함.
             w = (w - kernel_size + 2 * padding) // stride + 1
-            print("w = ", w)
+            # print("w = ", w)
             h = (h - kernel_size + 2 * padding) // stride + 1
-            print("h = ", h)
+            # print("h = ", h)
             
             # Max Pooling을 거치면 아래와 같이 너비와 높이가 변함!
             w = (w - 2) // 2 + 1
@@ -128,8 +128,11 @@ class ConvHeightmapEncoder(nn.Module):
 
         self.mlps = nn.ModuleList()
         in_channels = self.conv_out_features    # in_channels =  tensor(2304, dtype=torch.int32)
+        print("isaac_rover/rover_envs/envs/navigation/learning/skrl/models.py에서 실행중\n"*10)
+        print(f"in_channels = {in_channels}")
         
         for feature in features:
+            print(f"")
             self.mlps.append(nn.Linear(in_channels, feature))
             self.mlps.append(get_activation(encoder_activation))
             in_channels = feature
@@ -141,16 +144,23 @@ class ConvHeightmapEncoder(nn.Module):
         # x is a flattened heightmap, reshape it to 2D
         # view함수는 텐서의 shape을 변경하는 함수임.
         # 처음에 -1은 자동으로 차원을 지정하라는 의미. 즉, 뒤의 값인 1에 맞게 알아서 shape이 변경됨.
+        # print("isaac_rover/rover_envs/envs/navigation/learning/skrl/models.py\n" * 20)
+        # print("self.heightmap_size : ", self.heightmap_size)
+        # print("x.shape : ", x.shape)  # 현재 x의 크기 확인
+        # print("변경 전!")
+        # print("x.shape = ",x.shape)
         x = x.view(-1, 1, self.heightmap_size, self.heightmap_size)
+        # print(f"heightmap_size = {self.heightmap_size}")
         # print("%^&*(^*%*&%*&%^*(%&*(%*&%&*(%*&(%&*(%&*(())))))))")
         # print("x 출력중")
         # print(x)
+        # print("변경 후!")
         # print("x.shape = ",x.shape)
 
         for layer in self.encoder_layers:
             x = layer(x)
             # print("x = layer(x) 결과 출력")
-            # print(x)
+            # print(x.shape)
 
         x = x.view(-1, self.conv_out_features)
         # print("%^&*(^*%*&%*&%^*(%&*(%*&%&*(%*&(%&*(%&*(())))))))")
@@ -174,7 +184,8 @@ class GaussianNeuralNetwork(GaussianMixin, BaseModel):
         mlp_input_size=5,
         mlp_layers=[256, 160, 128],
         mlp_activation="leaky_relu",
-        encoder_input_size=None,
+        dense_encoder_input_size=None,
+        sparse_encoder_input_size=None,
         encoder_layers=[80, 60],
         encoder_activation="leaky_relu",
         **kwargs,
@@ -194,11 +205,11 @@ class GaussianNeuralNetwork(GaussianMixin, BaseModel):
         )
 
         self.mlp_input_size = mlp_input_size
-        self.encoder_input_size = encoder_input_size
+        self.dense_encoder_input_size = dense_encoder_input_size
 
         in_channels = self.mlp_input_size
         if self.encoder_input_size is not None:
-            self.dense_encoder = HeightmapEncoder(self.encoder_input_size, encoder_layers, encoder_activation)
+            self.dense_encoder = HeightmapEncoder(self.dense_encoder_input_size, encoder_layers, encoder_activation)
             in_channels += encoder_layers[-1]
 
         self.mlp = nn.ModuleList()
@@ -417,13 +428,34 @@ class GaussianNeuralNetworkConv(GaussianMixin, BaseModel):
         action_space,
         device,
         mlp_input_size=5,
-        mlp_layers=[256, 160, 128],
+        mlp_layers=[512, 256, 128],
         mlp_activation="leaky_relu",
-        encoder_input_size=None,
+        dense_encoder_input_size=None,
+        sparse_encoder_input_size=None,
         encoder_layers=[80, 60],
         encoder_activation="leaky_relu",
         **kwargs,
     ):
+        print(f"observation_space = {observation_space}")
+        print(f"{type(observation_space)}")
+        print(f"action_space = {action_space}")
+        print(f"{type(action_space)}")
+        print(f"device = {device}")
+        print(f"{type(device)}")
+        print(f"mlp_input_size = {mlp_input_size}")
+        print(f"{type(mlp_input_size)}")
+        print(f"mlp_layers = {mlp_layers}")
+        print(f"{type(mlp_layers)}")
+        print(f"mlp_activation = {mlp_activation}")
+        print(f"{type(mlp_activation)}")
+        print(f"dense_encoder_input_size = {dense_encoder_input_size}")
+        print(f"{type(dense_encoder_input_size)}")
+        print(f"sparse_encoder_input_size = {sparse_encoder_input_size}")
+        print(f"{type(sparse_encoder_input_size)}")
+        print(f"encoder_layers = {encoder_layers}")
+        print(f"{type(encoder_layers)}")
+        print(f"encoder_activation = {encoder_activation}")
+        print(f"{type(encoder_activation)}")
         """Initialize the Gaussian neural network model.
 
         Args:
@@ -439,25 +471,35 @@ class GaussianNeuralNetworkConv(GaussianMixin, BaseModel):
         )
 
         self.mlp_input_size = mlp_input_size            # self.mlp_input_size = 5
-        self.encoder_input_size = encoder_input_size    # self.encoder_input_size = 10201
+        self.dense_encoder_input_size = dense_encoder_input_size    # self.encoder_input_size = 10201
+        self.sparse_encoder_input_size = sparse_encoder_input_size
 
         in_channels = self.mlp_input_size               # in_channels = 5
-        if self.encoder_input_size is not None:
+        if self.dense_encoder_input_size is not None:
             # encoder_layers = [8, 16, 32, 64]로 나옴. parsing됨.
             # encoder_activation =  leaky_relu
             
-            self.encoder = ConvHeightmapEncoder(self.encoder_input_size, encoder_layers, encoder_activation)
+            self.dense_encoder = ConvHeightmapEncoder(self.dense_encoder_input_size, encoder_layers, encoder_activation)
 
-            in_channels += self.encoder.out_features    # in_channels = 65. 원래 5였는데, self.encoder의 out_features가 60이어서 65가 됨.
+            in_channels += self.dense_encoder.out_features    # in_channels = 65. 원래 5였는데, self.encoder의 out_features가 60이어서 65가 됨.
+        
+        if self.sparse_encoder_input_size is not None:
+            # encoder_layers = [8, 16, 32, 64]로 나옴. parsing됨.
+            # encoder_activation =  leaky_relu
+            
+            self.sparse_encoder = ConvHeightmapEncoder(self.sparse_encoder_input_size, encoder_layers, encoder_activation)
+
+            in_channels += self.sparse_encoder.out_features    # in_channels = 125. 원래 65였는데, self.encoder의 out_features가 60이어서 125가 됨.
+
 
         self.mlp = nn.ModuleList()
 
         # mlp_layers = [256,160,128]
         # 실제 action을 출력하는 policy network를 설계하는 단계.
         # Exteroception(60) + Proprioception(5)를 input으로 받음.
-        # 65->256->160->128->2. 마지막 2는 action임. lin_vel, ang_vel
+        # 125->256->160->128->2. 마지막 2는 action임. lin_vel, ang_vel
         for feature in mlp_layers:
-            print("feature : ",feature)
+            # print("feature : ",feature)
             self.mlp.append(nn.Linear(in_channels, feature))
             self.mlp.append(get_activation(mlp_activation))
             in_channels = feature
@@ -467,16 +509,22 @@ class GaussianNeuralNetworkConv(GaussianMixin, BaseModel):
         self.log_std_parameter = nn.Parameter(torch.zeros(action_space))
 
     def compute(self, states, role="actor"):
+        # print("=========================================")
+        # print(f"{type(states)}")
+        # for key, values in states.items():
+            # print(f"key = {key}")
+            # print(f"value = {values}")
+            # print(f"type = {values.shape}")
         # Split the states into proprioception and heightmap if the heightmap is used.
-        if self.encoder_input_size is None:
+        if self.dense_encoder_input_size is None:
             x = states["states"]
         
         # Exteroception이 쓰였기 때문에, 분리를 해야함.
         # states 딕셔너리의 "states"키의 크기는 proprioception(5) + exteroception(10201) = 10206임.
         # 이때, "states"키의 첫 다섯개 원소가 proprioception이므로, 나머지 10201를 따로 exteroception으로 빼겠다는 의미.
-                
         else:
-            encoder_output = self.encoder(states["states"][:, self.mlp_input_size - 1:-1])  # encoder_output = 60
+            dense_encoder_output = self.dense_encoder(states["states"][:, self.mlp_input_size - 1:-1-self.sparse_encoder_input_size])  # encoder_output = 60
+            sparse_encoder_output = self.sparse_encoder(states["states"][:, self.mlp_input_size + self.dense_encoder_input_size - 1:-1])  # encoder_output = 60
             
             # x라는 변수에 proprioception(5) 정보를 따로 저장함.
             x = states["states"][:, 0:self.mlp_input_size]  # x =  torch.Size([1, 5])
@@ -486,12 +534,14 @@ class GaussianNeuralNetworkConv(GaussianMixin, BaseModel):
             # dim=1 : 두 번째 축에서 이어붙임 (열 기준)
             
             # 결국, x(proprioception, 5)과 encoder_output(exteroception, 60)을 torch.cat함수로 이어줌.
-            x = torch.cat([x, encoder_output], dim=1)   # x =  torch.Size([1, 65])
-
+            x = torch.cat([x, dense_encoder_output, sparse_encoder_output], dim=1)   # x =  torch.Size([1, 125])
+        
         # Compute the output of the MLP.
         for layer in self.mlp:
             x = layer(x)
-
+            
+        # print(f"compute된 결과 = {x}")
+        # print(f"type of x = {type(x)}")
         return x, self.log_std_parameter, {}
 
 
@@ -506,7 +556,8 @@ class DeterministicNeuralNetworkConv(DeterministicMixin, BaseModel):
         mlp_input_size=4,
         mlp_layers=[256, 160, 128],
         mlp_activation="leaky_relu",
-        encoder_input_size=None,
+        dense_encoder_input_size=None,
+        sparse_encoder_input_size=None,
         encoder_layers=[80, 60],
         encoder_activation="leaky_relu",
         **kwargs,
@@ -524,12 +575,16 @@ class DeterministicNeuralNetworkConv(DeterministicMixin, BaseModel):
         DeterministicMixin.__init__(self, clip_actions=False)
 
         self.mlp_input_size = mlp_input_size
-        self.encoder_input_size = encoder_input_size
+        self.dense_encoder_input_size = dense_encoder_input_size
+        self.sparse_encoder_input_size = sparse_encoder_input_size
 
         in_channels = self.mlp_input_size
-        if self.encoder_input_size is not None:
-            self.encoder = ConvHeightmapEncoder(self.encoder_input_size, encoder_layers, encoder_activation)
-            in_channels += self.encoder.out_features
+        if self.dense_encoder_input_size is not None:
+            self.dense_encoder = ConvHeightmapEncoder(self.dense_encoder_input_size, encoder_layers, encoder_activation)
+            in_channels += self.dense_encoder.out_features
+        if self.sparse_encoder_input_size is not None:
+            self.sparse_encoder = ConvHeightmapEncoder(self.sparse_encoder_input_size, encoder_layers, encoder_activation)
+            in_channels += self.sparse_encoder.out_features
 
         self.mlp = nn.ModuleList()
 
@@ -542,12 +597,14 @@ class DeterministicNeuralNetworkConv(DeterministicMixin, BaseModel):
         self.mlp.append(nn.Linear(in_channels, 1))
 
     def compute(self, states, role="actor"):
-        if self.encoder_input_size is None:
+        if self.dense_encoder_input_size is None:
             x = states["states"]
         else:
+            dense_encoder_output = self.dense_encoder(states["states"][:, self.mlp_input_size - 1:-1-self.sparse_encoder_input_size])  # encoder_output = 60
+            sparse_encoder_output = self.sparse_encoder(states["states"][:, self.mlp_input_size + self.dense_encoder_input_size - 1:-1])  # encoder_output = 60
             x = states["states"][:, :self.mlp_input_size]
-            encoder_output = self.encoder(states["states"][:, self.mlp_input_size - 1:-1])
-            x = torch.cat([x, encoder_output], dim=1)
+            
+            x = torch.cat([x, dense_encoder_output, sparse_encoder_output], dim=1)
 
         for layer in self.mlp:
             x = layer(x)

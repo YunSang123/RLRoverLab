@@ -148,16 +148,21 @@ def main():
     observation_space = gym.spaces.Box(low=-math.inf, high=math.inf, shape=(num_obs,))
     action_space = gym.spaces.Box(low=-1.0, high=1.0, shape=(num_actions,))
     print(f"num_obs = {num_obs}")
-    print(f"num_actinos = {num_actions}")
+    print(f"num_actions = {num_actions}")
 
     trainer_cfg = experiment_cfg["trainer"]
     trainer_cfg["timesteps"] = 1500
 
-    agent = get_agent(args_cli.agent, env, observation_space, action_space, experiment_cfg, conv=True)
+    agent = get_agent(args_cli.agent, env, observation_space, action_space, experiment_cfg, conv=False)
     # Get the checkpoint path from the experiment configuration
     print(f'args_cli.task: {args_cli.task}')
     # agent_policy_path = gym.spec(args_cli.task).kwargs.pop("best_model_path") # tmp
-    agent_policy_path = "./load/agent_610k.pt"
+
+    teacher_policy_name = 'best_agent_190k'
+    
+    agent_policy_path = "teacher_load/" + teacher_policy_name + ".pt"
+    
+    file_name = teacher_policy_name + "_data.pt"
     print("agent_policy_path : ", agent_policy_path)
     
     agent.load(agent_policy_path)
@@ -250,7 +255,7 @@ def main():
     print(trainer_cfg)
 
     trainer = SkrlSequentialLogTrainer(cfg=trainer_cfg, agents=agent, env=env)
-    trainer.record()
+    trainer.record(file_name)
     ########################################
     
 

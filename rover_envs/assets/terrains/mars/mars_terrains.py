@@ -36,7 +36,7 @@ class MarsTerrainSceneCfg(InteractiveSceneCfg):
                 "debug1",               # terrain1이 원본!
                 # "terrain1",
                 # "taehu.usdc",
-                "terrain_merged.usd"    # terrain_merged.usd가 원본
+                "big_terrain_merged.usd"    # big_terrain_merged.usd가 원본
             ),
         ),
         init_state=AssetBaseCfg.InitialStateCfg(pos=(0.0, 0.0, 0.0)),
@@ -53,7 +53,7 @@ class MarsTerrainSceneCfg(InteractiveSceneCfg):
             "debug1",                 # terrain1이 원본!
             # "terrain1",
             # "flat_terrain_only.usd",
-            "terrain_only.usd"    # terrain_only.usd가 원본!
+            "big_terrain_only.usd"    # big_terrain_only.usd가 원본!
         ),
     )
 
@@ -67,7 +67,7 @@ class MarsTerrainSceneCfg(InteractiveSceneCfg):
                 "debug1",             # terrain1이 원본!
                 # "terrain1",
                 # "no_obstacles.usd",
-                "rocks_merged.usd",   # rocks_merged.usd가 원본!
+                "big_rocks_merged.usd",   # big_rocks_merged.usd가 원본!
                 
             ),
         ),

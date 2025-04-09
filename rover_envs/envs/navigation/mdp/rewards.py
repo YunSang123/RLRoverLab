@@ -29,6 +29,8 @@ def distance_to_target_reward(env: ManagerBasedRLEnv, command_name: str) -> torc
     distance = torch.norm(target_position, p=2, dim=-1)
 
     # Return the reward, normalized by the maximum episode length
+    r = (1.0 / (1.0 + (0.11 * distance * distance))) / env.max_episode_length
+    # print(f"reward1 = {5*r}")
     return (1.0 / (1.0 + (0.11 * distance * distance))) / env.max_episode_length
 
 
@@ -45,7 +47,7 @@ def reached_target(env: ManagerBasedRLEnv, command_name: str, threshold: float) 
     target_position = target[:, :2]
 
     # Get angle to target
-    angle = env.command_manager.get_command(command_name)[:, 3]
+    # angle = env.command_manager.get_command(command_name)[:, 3]
 
     # Calculating the distance and determining if the target is reached
     distance = torch.norm(target_position, p=2, dim=-1)
@@ -53,7 +55,9 @@ def reached_target(env: ManagerBasedRLEnv, command_name: str, threshold: float) 
     reward_scale = time_steps_to_goal / env.max_episode_length
 
     # Return the reward, scaled depending on the remaining time steps
-    return torch.where((distance < threshold) & (torch.abs(angle) < 0.1), 2.0 * reward_scale, 0.0)
+    # r = torch.where((distance < threshold), 2.0 * reward_scale, 0.0)
+    # print(f"reward2 = {5*r}")
+    return torch.where((distance < threshold), 2.0 * reward_scale, 0.0)
 
 
 def oscillation_penalty(env: ManagerBasedRLEnv) -> torch.Tensor:
@@ -96,6 +100,9 @@ def angle_to_target_penalty(env: ManagerBasedRLEnv, command_name: str) -> torch.
     angle = torch.atan2(target_vector_b[:, 1], target_vector_b[:, 0])
 
     # Return the absolute value of the angle, normalized by the maximum episode length.
+    
+    r = torch.where(torch.abs(angle) > 2.0, torch.abs(angle) / env.max_episode_length, 0.0)
+    # print(f"reward4 = {-1.5*r}")
     return torch.where(torch.abs(angle) > 2.0, torch.abs(angle) / env.max_episode_length, 0.0)
 
 
@@ -106,6 +113,10 @@ def heading_soft_contraint(env: ManagerBasedRLEnv, asset_cfg: SceneEntityCfg) ->
     This function applies a penalty when the rover's action indicates reverse movement.
     The penalty is normalized by the maximum episode length.
     """
+    
+    r = torch.where(env.action_manager.action[:, 0] < 0.0, (1.0 / env.max_episode_length), 0.0)
+    # print(f"reward5 = {-0.5*r}")
+    
     return torch.where(env.action_manager.action[:, 0] < 0.0, (1.0 / env.max_episode_length), 0.0)
 
 
@@ -124,6 +135,9 @@ def collision_penalty(env: ManagerBasedRLEnv, sensor_cfg: SceneEntityCfg, thresh
     # Calculating the force and applying a penalty if collision forces are detected
     normalized_forces = torch.norm(force_matrix, dim=1)
     forces_active = torch.sum(normalized_forces, dim=-1) > 1
+    
+    r = torch.where(forces_active, 1.0, 0.0)
+    # print(f"reward6 = {-3*r}")
     return torch.where(forces_active, 1.0, 0.0)
 
 
@@ -137,10 +151,12 @@ def far_from_target_reward(env: ManagerBasedRLEnv, command_name: str, threshold:
 
     distance = torch.norm(target_position, p=2, dim=-1)
 
+    r = torch.where(distance > threshold, 1.0, 0.0)
+    # print(f"reward7 = {-2*r}")
     return torch.where(distance > threshold, 1.0, 0.0)
 
 
-def angle_to_goal_reward(env: ManagerBasedRLEnv, command_name: str) -> torch.Tensor:
+def angle_to_goal_reward(env: ManagerBasedRLEnv, command_name: str, threshold: float) -> torch.Tensor:
     """
     Calculate the angle to the goal.
 
@@ -150,9 +166,10 @@ def angle_to_goal_reward(env: ManagerBasedRLEnv, command_name: str) -> torch.Ten
     # Get vector(x,y) from rover to target, in base frame of the rover.
     target_vector_b = env.command_manager.get_command(command_name)[:, :2]
     distance = torch.norm(target_vector_b, p=2, dim=-1)
-    angle_b = env.command_manager.get_command(command_name)[:, 3]
-
-    angle_reward = (1 / (1 + distance)) * 1 / (1 + torch.abs(angle_b))
+    angle = torch.atan2(target_vector_b[:, 1], target_vector_b[:, 0])
+    reward = 1/(1+torch.abs(angle)) / env.max_episode_length
 
     # Return the cosine of the angle, normalized by the maximum episode length.
-    return angle_reward / env.max_episode_length
+
+    # print(f"reward8 = {10*r}")
+    return torch.where(distance > threshold, 0.0, reward)

@@ -32,10 +32,14 @@ class TeacherDataset(Dataset):
     # Index is the robot instance.
     def __getitem__(self, index):
         # print(f"{index+1}번째 getitem 함수 실행")
-        #print(index)
+        # print(f"index = {index}")
+        # print(f"data shape = {self.data['data'].shape}")
         max_delay = 0
         info = self.get_info()
         gt = self.data["data"][:, index]
+        
+        # add_noise를 통해 훈련 데이터에 noise 추가
+        # exteroception 외에는 noise 추가 X
         data = self.add_noise(gt)   # GPU에 로드
         
         # shift actions to simulate random delay for whole rover
@@ -58,7 +62,7 @@ class TeacherDataset(Dataset):
         # print(data[0,self.remove_idx+7])
 
         # data[:, self.remove_idx+7] = 
-        NEW_NOISE_LEVELS = True
+        NEW_NOISE_LEVELS = False
         if NEW_NOISE_LEVELS:
             # Add offset
             #gt_ex += self.offset_z(gt_ex)
@@ -70,7 +74,7 @@ class TeacherDataset(Dataset):
             gt_ex = self.add_large_noise(gt_ex)
 
             gt_ex = self.add_occlusions(gt_ex)
-
+        # print("dataset.py/getitem함수에서 실행한 data 7개(reset+action+proprioceptive)")
         return data, gt_ac, gt_ex
 
     def add_noise(self, gt):
@@ -111,32 +115,32 @@ class TeacherDataset(Dataset):
         noise_mode = {}
         r = random.random()
         if r <= 0.6:
-            # normal noise
-            noise_mode["dev"] = 0.15
+            # low
+            noise_mode["dev"] = 0.1
             noise_mode["is_add_offset"] = False
             noise_mode["offset"] = 0.0
             noise_mode["is_offset_dev"] = False
             noise_mode["offset_dev"] = False
             noise_mode["is_missing_points"] = True
-            noise_mode["missing_points_prob"] = 0.2
+            noise_mode["missing_points_prob"] = 0.1
         elif r <= 0.9:
-            # large offsets
-            noise_mode["dev"] = 0.05
+            # low + offset
+            noise_mode["dev"] = 0.1
+            noise_mode["is_add_offset"] = True
+            noise_mode["offset"] = 0.05
+            noise_mode["is_offset_dev"] = False
+            noise_mode["offset_dev"] = False
+            noise_mode["is_missing_points"] = True
+            noise_mode["missing_points_prob"] = 0.1
+        else:
+            # high
+            noise_mode["dev"] = 0.2
             noise_mode["is_add_offset"] = False
             noise_mode["offset"] = 0.0
             noise_mode["is_offset_dev"] = False
-            noise_mode["offset_dev"] = 0.02
+            noise_mode["offset_dev"] = False
             noise_mode["is_missing_points"] = True
-            noise_mode["missing_points_prob"] = 0.2
-        else:
-            # large noise magnitude
-            noise_mode["dev"] = 0.2
-            noise_mode["is_add_offset"] = True 
-            noise_mode["offset"] = 0.0
-            noise_mode["is_offset_dev"] = True
-            noise_mode["offset_dev"] = 0.02
-            noise_mode["is_missing_points"] = True
-            noise_mode["missing_points_prob"] = 0.2
+            noise_mode["missing_points_prob"] = 0.1
         return noise_mode
 
     def create_rand_tensor(self, dev, shape, add_offset=False, offset=0, is_offset_dev=False, offset_dev=0.0, device='cuda:0'):

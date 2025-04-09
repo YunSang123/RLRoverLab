@@ -192,7 +192,7 @@ class Trainer:
             # compute actions
             # with torch.no_grad() = 그래디언트 계산을 비활성화하는 것임.
             with torch.no_grad():
-                # self.agents.act는 /isaac-sim/kit/python/lib/python3.10/site-packages/skrl/agents/torch/ppo/ppo.py에서 실행됨!
+                # self.agents.act는 /isaac-sim/kit/python/lib/python3.10/site-packages/skrl/agents/torch/ppo/ppo.py
                 actions = self.agents.act(states, timestep=timestep, timesteps=self.timesteps)[0]
                 # print(f"actions = {actions}")
                 # print("states\n", states)
@@ -206,7 +206,21 @@ class Trainer:
                 # print("isaac_rover/skrl/trainers/torch/base.py")
                 
                 # step the environments
+                # states.shape = torch.Size([512, 1121])
                 next_states, rewards, terminated, truncated, infos = self.env.step(actions)
+                n_actions = 2
+                n_distance = 1
+                n_heading = 1
+                n_dense = 676
+                n_sparse = 441
+                # print(f"actions = {next_states[0,:n_actions]}")
+                # print(f"distance = {next_states[0,n_actions:n_actions+n_distance]}")
+                # print(f"heading = {next_states[0,n_actions+n_distance:n_actions+n_distance+n_heading]}")
+                # print(f"dense = {states[0,n_actions+n_distance+n_heading:n_actions+n_distance+n_heading+n_dense]}")
+                # print(f"sparse = {states[0,n_actions+n_distance+n_heading+n_dense:n_actions+n_distance+n_heading+n_dense+n_sparse]}")
+                # print(f"rewards = {rewards}")
+                # print(f"actions = {actions}")
+                # next_states.shape = torch.Size([num_envs, 1121])
 
                 # render scene
                 if not self.headless:
@@ -229,9 +243,9 @@ class Trainer:
                         if isinstance(v, torch.Tensor) and v.numel() == 1:
                             self.agents.track_data(f"Info / {k}", v.item())
 
-            # post-interaction
+            # post_interaction 실행 위치 : /isaac-sim/kit/python/lib/python3.10/site-packages/skrl/agents/torch/ppo/ppo.py
             self.agents.post_interaction(timestep=timestep, timesteps=self.timesteps)
-
+            
             # reset environments
             if self.env.num_envs > 1:
                 states = next_states

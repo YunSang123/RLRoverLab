@@ -41,12 +41,19 @@ class Trainer():
         total_loss_benchmark = 0
         
         for batch_idx, (data, targets_ac, targets_ex) in enumerate(loop):
-            data = data.to(device=self.DEVICE)
+            # batch_idx는 0부터 512/batch_size까지 1씩 증가하면서 출력됨.
+            
+            # data는 dataset.py에서 gt_state에 noise 추가 O
+            data = data.to(device=self.DEVICE)      # shape = torch.Size([8, 1499, 1124])
+            
+            # initial hidden state
             h = model.belief_encoder.init_hidden(self.BATCH_SIZE).to(self.DEVICE)
+            
             #TODO format target to be in the correct format
-            targets_ac = targets_ac.float().to(device=self.DEVICE)
-            targets_ex = targets_ex.float().to(device=self.DEVICE)
-
+            # targets_ac,ex는 gt_state에 noise 추가 X
+            targets_ac = targets_ac.float().to(device=self.DEVICE)      # shape = torch.Size([8, 1499, 2])
+            targets_ex = targets_ex.float().to(device=self.DEVICE)      # shape = torch.Size([8, 1499, 1117])
+            
             horizon = 50
             
             for i in range(math.floor(data.shape[1]/horizon)):
@@ -56,13 +63,24 @@ class Trainer():
                 # 목적 : GPU memory 절약 + 연산 속도 향상을 위해 사용
                 # 기능 : float32대신 일부 연산을 float16으로 자동 변환해서 실행
                 with torch.cuda.amp.autocast():
-                    actions = torch.zeros(self.BATCH_SIZE,horizon, 2,device='cuda:0')
-                    predictions = torch.zeros(self.BATCH_SIZE,horizon, data.shape[2]-7,device='cuda:0')
+                    actions = torch.zeros(self.BATCH_SIZE,horizon, 2,device='cuda:0')                   # shape = [8, 50, 2]
+                    predictions = torch.zeros(self.BATCH_SIZE,horizon, data.shape[2]-7,device='cuda:0') # shape = [8, 50, 1117]
                     
                     for j in range(horizon):
+                        # print("train.py에서 실행한 data shape 출력. horizon for 구문")
+                        # data의 shape = torch.Size([8, 1499, 1124])
+                        # model에 들어가는 input의 shape = torch.Size([8, 1, 1124])
+                        input_data = data[:,j+i*horizon].unsqueeze(1)
+                        # print(input_data[0,0,:7])
                         a,p,h = model(data[:,j+i*horizon].unsqueeze(1),h)
+                        # a.shape = torch.Size([8, 1, 2])
+                        # p.shape = torch.Size([8, 1, 1117])
                         actions[:,j,:]  = a.squeeze()
                         predictions[:,j,:] = p.squeeze() # [num_robots, timestep, observations]
+                        # actions.shape = torch.Size([8, 50, 2])
+                        # predictions.shape = torch.Size([8, 50, 1117])
+                        
+                        # 전 timestep의 action을 다음 훈련 데이터의 action에 
                         data[:,j+i*horizon+1,5:7] = actions[:,j].clone()
                     del a,p
                     gc.collect()
@@ -72,7 +90,7 @@ class Trainer():
                     loss_be = loss_fn["behaviour"](actions, targets_ac[:,i*horizon:i*horizon+horizon])
                     loss_re = loss_fn["recontruction"](predictions, targets_ex[:,i*horizon:i*horizon+horizon])
                     loss_benchmark = loss_fn["recontruction"](data[:,i*horizon:i*horizon+horizon,7:],targets_ex[:,i*horizon:i*horizon+horizon])
-                    loss = 1.0 * loss_be + (0.0000000000000000000000001 * loss_re)
+                    loss = 1.00000000000000000000 * loss_be + (1e-25 * loss_re)
                     wandb.log({"Loss": loss.item(),
                         "Behaviour loss": loss_be,
                         "Reconstruction loss": loss_re,
@@ -92,11 +110,10 @@ class Trainer():
                 h = h.detach()
                 data = data.detach()
                 # print(f"predictions.shape = {predictions.shape}")
+                
                 if i == (math.floor(data.shape[1]/horizon)-1):
                     # print(i)
                     if batch_idx == 63:
-                        print("predictions.shape은 다음과 같음.")
-                        print(predictions.shape)
                         torch.save(predictions[1,30,:].detach(),"predictions.pt")
                         torch.save(data[1,30,7:].detach(),"input.pt")
                         torch.save(targets_ex[1,30,:].detach(),"targets.pt")
@@ -119,7 +136,8 @@ class Trainer():
         train_ds = TeacherDataset("teacher_model/")
         train_loader = DataLoader(train_ds,batch_size=self.BATCH_SIZE,num_workers=0,pin_memory=False, shuffle=False)
         
-        model = Student(info=train_ds.get_info(), cfg=self.cfg, teacher="teacher_model/agent_610k.pt").to(self.DEVICE)
+        model = Student(info=train_ds.get_info(), cfg=self.cfg, teacher="teacher_model/best_agent_190k.pt").to(self.DEVICE)
+        # print(model)
         loss_fn = {
             "behaviour":     nn.MSELoss(reduction="mean"),
             "recontruction": nn.MSELoss(reduction="mean")
@@ -153,7 +171,7 @@ class Trainer():
         ###################################################
         # load pre-trained student policy model to continue training
         if self.load == True:
-            load_student_model = torch.load("load/best_6epoch_8batchsize_1e-4lr.pt")["state_dict"]
+            load_student_model = torch.load("load/5_64_1e-4_10_32_1e-4.pt")["state_dict"]
             model.load_state_dict(load_student_model)
             print("Student model loaded successfully!")
         ###################################################
@@ -212,30 +230,34 @@ def cfg_fn():
             "exteroceptive":    0,
         },
         "learning":{
-            "learning_rate": 1e-5,
-            "epochs": 1,        # tmp = 5
-            "batch_size": 8,    # batch_size = 8
+            "learning_rate": 1e-4,      # tmp = 1e-4
+            "epochs": 5,                # tmp = 5
+            "batch_size": 64,            # tmp = 8
         },
         "conv_encoder":{
             "activation_function": "leakyrelu",
             "encoder_features": [8,16,32,64],
             "output_size": 60,
         },
-
+        "encoder":{
+          "activation_function": "leakyrelu",
+          "encoder_features": [60, 20],
+        },
         "belief_encoder": {
             "hidden_dim":       300,
             "n_layers":         2,
             "activation_function":  "leakyrelu",
-            "gb_features": [128,128,120],
-            "ga_features": [128,128,120]},
+            "gb_features": [128,256,512,1024,40],
+            "ga_features": [128,256,512,1024,40]},
 
         "belief_decoder": {
             "activation_function": "leakyrelu",
             "gate_features":    [1000,1500],
             "decoder_features": [1000,1500]
         },
+        # teacher policy mlp
         "mlp":{"activation_function": "leakyrelu",
-            "network_features": [256,160,128]},
+            "network_features": [512,256,128]},
             }
 
     return cfg

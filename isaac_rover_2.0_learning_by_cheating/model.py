@@ -22,22 +22,22 @@ class Layer(nn.Module):
 
 class Encoder(nn.Module):
     def __init__(
-            self, info, cfg, encoder=""):
+            self, info, cfg):
         super(Encoder,self).__init__()
         encoder_features = cfg["encoder_features"]          # [1500,1000]
+        print(f"encoder_features = {encoder_features}")
         activation_function = cfg["activation_function"]    # [leakyrelu]
         
-        self.encoder = nn.ModuleList() 
-        in_channels = info[encoder]                         # encoder가 sparse면 in_channels는 441, encoder가 dense면 in_channels는 676
+        self.encoder_layers = nn.ModuleList() 
+        in_channels = info                         # encoder가 sparse면 in_channels는 441, encoder가 dense면 in_channels는 676
         for feature in encoder_features:
-            self.encoder.append(Layer(in_channels, feature, activation_function))
+            self.encoder_layers.append(nn.Linear(in_channels, feature))
+            self.encoder_layers.append(nn.LeakyReLU(inplace=True))
             in_channels = feature
 
     def forward(self, x):
-        
-        for layer in self.encoder:
+        for layer in self.encoder_layers:
             x = layer(x)
-        
         return x
     
 class ConvHeightmapEncoder(nn.Module):
@@ -189,8 +189,8 @@ class Belief_Encoder(nn.Module):
         self.gru = nn.GRU(input_dim, self.hidden_dim, self.n_layers, batch_first=True)
         self.gb = nn.ModuleList()
         self.ga = nn.ModuleList()
-        gb_features = cfg["gb_features"]                        # [128,128,120]
-        ga_features = cfg["ga_features"]                        # [128,128,120]
+        gb_features = cfg["gb_features"]                        # [128,256,512,1024]
+        ga_features = cfg["ga_features"]                        # [128,256,512,1024]
 
         in_channels = self.hidden_dim                           # 300
         for feature in gb_features:                             # [128,128,120]
@@ -209,6 +209,7 @@ class Belief_Encoder(nn.Module):
         # e = exteroceptive
         # h = hidden state
         # x = input data, h = hidden state
+        
         x = torch.cat((p,l_e),dim=2)
         out, h = self.gru(x, h)
         x_b = x_a = out
@@ -274,7 +275,6 @@ class Belief_Decoder(nn.Module):
             torch.nn.init.xavier_uniform(m.weight)
             m.bias.data.fill_(1.0)
 
-
 class MLP(nn.Module):
     def __init__(
             self, info, cfg, belief_dim):
@@ -299,12 +299,13 @@ class MLP(nn.Module):
         # print("hejhej")
         # print(p.shape)
         # print(belief.shape)
+        # p.shape = torch.Size([8, 1, 4])
+        # belief.shape = torch.Size([8, 1, 40])
         x = torch.cat((p,belief),dim=2)
         # print(x.shape)
         for layer in self.mlp:
             x = layer(x)
         return x, self.log_std_parameter
-
 
 class Student(nn.Module):
     def __init__(
@@ -316,16 +317,16 @@ class Student(nn.Module):
         self.n_sp = info["sparse"]          # 441
         self.n_de = info["dense"]           # 676
         self.n_ac = info["actions"]         # 2
-        conv_encoder_layers = cfg["conv_encoder"]["encoder_features"]
+        encoder_layers = cfg["encoder"]
         
-        self.sparse_encoder = ConvHeightmapEncoder(self.n_sp, conv_encoder_layers)
-        self.dense_encoder = ConvHeightmapEncoder(self.n_de, conv_encoder_layers)
-        encoder_dim = cfg["conv_encoder"]["output_size"] * 2        # encoder_dim = 2000
+        self.sparse_encoder = Encoder(self.n_sp, encoder_layers)
+        self.dense_encoder = Encoder(self.n_de, encoder_layers)
+        encoder_dim = cfg["encoder"]["encoder_features"][-1] * 2        # encoder_dim = 2000
         self.belief_encoder = Belief_Encoder(info, cfg["belief_encoder"], input_dim=encoder_dim)
         self.belief_decoder = Belief_Decoder(info, cfg["belief_decoder"], cfg["belief_encoder"]["hidden_dim"])
         
         # student policy의 최종 MLP
-        self.MLP = MLP(info, cfg["mlp"], belief_dim=120)
+        self.MLP = MLP(info, cfg["mlp"], belief_dim=encoder_dim)
         # print(f"self.MLP = {self.MLP}")
         # print(f"type 출력중!\n{type(self.MLP)}")
         # print("=====================\n"*5)
@@ -342,6 +343,7 @@ class Student(nn.Module):
         mlp_params = {k: v for k,v in teacher_policy.items() if (k.startswith("mlp") or "log_std_parameter" in k)}
         sparse_encoder_params = {k[15:]: v for k,v in teacher_policy.items() if "sparse_encoder" in k}
         dense_encoder_params = {k[14:]: v for k,v in teacher_policy.items() if "dense_encoder" in k}
+        
         # print(f"mlp_params = {mlp_params}")
         # print(f"encoder_params1 = {encoder_params1}")
         # print(f"\n")
@@ -376,15 +378,19 @@ class Student(nn.Module):
         self.dense_encoder.to("cuda")
 
     def forward(self, x, h):
-        n_ac = self.n_ac
-        n_pr = self.n_pr
-        n_re = self.n_re
-        n_sp = self.n_sp
-        n_de = self.n_de
+        n_re = self.n_re    # 1
+        n_ac = self.n_ac    # 2
+        n_pr = self.n_pr    # 4
+        n_sp = self.n_sp    # 441
+        n_de = self.n_de    # 676
+        # print("num of state")
+        # print(n_re, n_ac, n_pr, n_sp, n_de)
         reset = x[:,:, 0:n_re]
+        # print(f"reset = {reset}")
         actions = x[:,:,n_re:n_re+n_ac]
-        
+        # print(f"actions = {actions}")
         proprioceptive = x[:,:,n_re+n_ac:n_re+n_ac+n_pr]
+        # print(f"proprioceptive = {proprioceptive}")
         sparse = x[:,:,-(n_sp+n_de):-n_de]
         dense = x[:,:,-n_de:]
         exteroceptive = torch.cat((sparse,dense),dim=2)
@@ -397,12 +403,9 @@ class Student(nn.Module):
         
         # e = x[:,:,n_p:1084]         # Extract exteroceptive information
         
-        e_l1 = self.sparse_encoder(sparse) # Pass exteroceptive information through encoder
-        
-        e_l2 = self.dense_encoder(dense)
-        
-        e_l1 = e_l1.unsqueeze(1)
-        e_l2 = e_l2.unsqueeze(1)
+        # Pass exteroceptive information through encoder
+        e_l1 = self.sparse_encoder(sparse)  # shape = [batch_size, 1, encoder_output]
+        e_l2 = self.dense_encoder(dense)    # shape = [batch_size, 1, encoder_output]
         
         # print(f"e_l1.shape = {e_l1.shape}")
         # print(f"e_l2.shape = {e_l2.shape}")

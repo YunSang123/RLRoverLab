@@ -89,8 +89,9 @@ class RoverSceneCfg(MarsTerrainSceneCfg):
 
     dense_height_scanner = RayCasterCfg(
         prim_path="{ENV_REGEX_NS}/rover/base_footprint",
-        offset=RayCasterCfg.OffsetCfg(pos=[0.0, 0.0, 1.0], rot=[math.cos(math.radians(-60/2)),0,math.sin(math.radians(-60/2)),0]),
-        attach_yaw_only=False,
+        # offset=RayCasterCfg.OffsetCfg(pos=[0.0, 0.0, 1.0], rot=[math.cos(math.radians(-60/2)),0,math.sin(math.radians(-60/2)),0]),
+        offset=RayCasterCfg.OffsetCfg(pos=[1.0, 0.0, 1.0]),
+        attach_yaw_only=True,
         pattern_cfg=patterns.GridPatternCfg(resolution=0.04, size=[1.0, 1.0]),
         debug_vis=True,
         # mesh_prim_paths=["/World/defaultGroundPlane"],
@@ -99,8 +100,8 @@ class RoverSceneCfg(MarsTerrainSceneCfg):
     )
     sparse_height_scanner = RayCasterCfg(
         prim_path="{ENV_REGEX_NS}/rover/base_footprint",
-        offset=RayCasterCfg.OffsetCfg(pos=[0.0, 0.0, 1.0], rot=[math.cos(math.radians(-60/2)),0,math.sin(math.radians(-60/2)),0]),
-        attach_yaw_only=False,
+        offset=RayCasterCfg.OffsetCfg(pos=[1.0, 0.0, 1.0]),
+        attach_yaw_only=True,
         pattern_cfg=patterns.GridPatternCfg(resolution=0.1, size=[2.0, 2.0]),
         debug_vis=True,
         # mesh_prim_paths=["/World/defaultGroundPlane"],
@@ -164,7 +165,7 @@ class RewardsCfg:
     )
     reached_target = RewTerm(
         func=mdp.reached_target,
-        weight=5.0,
+        weight=7.0,
         params={"command_name": "target_pose", "threshold": 0.18},
     )
     oscillation = RewTerm(
@@ -195,8 +196,8 @@ class RewardsCfg:
     )
     angle_diff = RewTerm(
         func=mdp.angle_to_goal_reward,
-        weight=5.0,
-        params={"command_name": "target_pose"},
+        weight=3.0,
+        params={"command_name": "target_pose", "threshold" : 4},
     )
 
 
@@ -207,7 +208,7 @@ class TerminationsCfg:
     time_limit = DoneTerm(func=mdp.time_out, time_out=True)
     is_success = DoneTerm(
         func=mdp.is_success,
-        params={"command_name": "target_pose", "threshold": 0.5},
+        params={"command_name": "target_pose", "threshold": 0.18},
     )
     far_from_target = DoneTerm(
         func=mdp.far_from_target,
@@ -221,7 +222,7 @@ class TerminationsCfg:
     turn_over = DoneTerm(
         func=mdp.turn_over,
         params={"sensor_cfg": SceneEntityCfg(
-            "dense_height_scanner"), "threshold": 0.5}
+            "dense_height_scanner"), "threshold": 0.4}
     )
 
 

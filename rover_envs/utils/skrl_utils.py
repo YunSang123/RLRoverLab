@@ -199,7 +199,7 @@ class SkrlSequentialLogTrainer(Trainer):
         # single agent
         if self.env.num_agents == 1:
             print("실행전!\n"*10)
-            # /isaac-sim/kit/python/lib/python3.10/site-packages/skrl/trainers/torch/base.py에서 single_agent_eval 메소드가 실행됨!
+            # single_agent_eval() 실행 위치 : /isaac-sim/kit/python/lib/python3.10/site-packages/skrl/trainers/torch/base.py
             self.single_agent_eval()
             print("실행후!\n"*10)
             return
@@ -245,8 +245,12 @@ class SkrlSequentialLogTrainer(Trainer):
                 # reset environments
                 # note: here we do not call reset scene since it is done in the env.step() method
                 states.copy_(next_states)
+    
+    def student_eval(self, h):
+        # 실행 위치 : /isaac-sim/kit/python/lib/python3.10/site-packages/skrl/trainers/torch/base.py
+        self.single_agent_student_eval(h)
                 
-    def record(self) -> None:
+    def record(self, file_name) -> None:
         """Record the agents sequentially.
 
         This method executes the following steps in loop:
@@ -267,7 +271,7 @@ class SkrlSequentialLogTrainer(Trainer):
         # single agent
         if self.env.num_agents == 1:
             print("실행전!\n"*10)
-            # /isaac-sim/kit/python/lib/python3.10/site-packages/skrl/trainers/torch/base.py에서 single_agent_record 메소드가 실행됨!
-            self.single_agent_record()
+            # self.single_agent_record 실행 위치 : /isaac-sim/kit/python/lib/python3.10/site-packages/skrl/trainers/torch/base.py
+            self.single_agent_record(file_name)
             print("실행후!\n"*10)
             return

@@ -28,7 +28,7 @@ def reset_root_state_rover(env: ManagerBasedEnv, env_ids: torch.Tensor, asset_cf
     positions = spawn_locations
     # positions[:, 0] = 48
     # positions[:, 1] = 13
-    positions[:, 2] += z_offset/2
+    # positions[:, 2] += z_offset/2
     # print(f"positions = {positions}\n"*5)
 
     # Random angle

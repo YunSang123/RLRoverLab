@@ -230,7 +230,7 @@ def train():
     #exit()
     trainer_cfg = experiment_cfg["trainer"]
 
-    agent = get_agent(args_cli.agent, env, observation_space, action_space, experiment_cfg, conv=True)
+    agent = get_agent(args_cli.agent, env, observation_space, action_space, experiment_cfg, conv=False)
     print("agent : ",agent)
     print("agent type : ", type(agent))
     
@@ -238,30 +238,20 @@ def train():
     # 기존 모델 체크포인트 로드
     #######################
     if args_cli.load:   # 기존 model을 이어서 학습
-        print("Load previous model and train it!")
-        checkpoint_path = "./load/agent_410k.pt"
-        checkpoint = torch.load(checkpoint_path)
-        print(f"agent.policy 타입, 내용 출력!\n"*10)
-        print(f"type = {type(agent.policy)}")
-        print("\n"*5)
-        print(f"{agent.policy}")
-        print("\n"*5)
-        print(f"checkpoint[policy] = {checkpoint['policy']}")
-        agent.policy.load_state_dict(checkpoint["policy"])
-        agent.value.load_state_dict(checkpoint["value"])
-        agent.optimizer.load_state_dict(checkpoint["optimizer"])
+        checkpoint_path = "./load/best_agent_355k.pt"
+        # agent.load하는 경로 : /isaac-sim/kit/python/lib/python3.10/site-packages/skrl/agents/torch/base.py
+        agent.load(checkpoint_path)
     else:               # 새로 학습.
         print("Train new model!")
-        
-    print(f"agent.policy info\n"*10)
-    print(f"{agent.policy}")
+    
+    # env의 attribute와 method 확인!
+    # print(dir(env.env.action_manager))
     
     trainer = SequentialTrainer(cfg=trainer_cfg, agents=agent, env=env)
     trainer.train()
 
     env.close()
     simulation_app.close()
-
 
 if __name__ == "__main__":
     train()

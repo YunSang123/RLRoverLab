@@ -81,7 +81,7 @@ class SequentialTrainer(Trainer):
             # single-agent
             if self.env.num_agents == 1:
                 # 실제로 실행되는 함수
-                # self.single_agent_train()은 /workspace/isaac_rover/skrl/trainers/torch/base.py에서 실행됨!
+                # self.single_agent_train()은 /workspace/isaac_rover/skrl/trainers/torch/base.py
                 self.single_agent_train()
             # multi-agent
             else:

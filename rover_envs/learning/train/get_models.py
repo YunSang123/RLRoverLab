@@ -3,10 +3,11 @@ from isaaclab.envs import ManagerBasedRLEnv
 
 from rover_envs.envs.navigation.learning.skrl.models import (Critic, DeterministicActor, DeterministicNeuralNetwork,
                                                              DeterministicNeuralNetworkConv, GaussianNeuralNetwork,
-                                                             GaussianNeuralNetworkConv)
+                                                             GaussianNeuralNetworkConv,
+                                                             GaussianNeuralNetwork_Student, DeterministicNeuralNetwork_Student)
 
 
-def get_models(agent: str, env: ManagerBasedRLEnv, observation_space: Box, action_space: Box, conv: bool = False):
+def get_models(agent: str, env: ManagerBasedRLEnv, observation_space: Box, action_space: Box, conv: bool = False, student_model_path: str="", env_num=1):
     """
     Placeholder function for getting the models.
 
@@ -32,25 +33,71 @@ def get_models(agent: str, env: ManagerBasedRLEnv, observation_space: Box, actio
         return get_model_double_critic_deterministic(env, observation_space, action_space)
     if agent == "TD3":
         return get_model_double_critic_deterministic(env, observation_space, action_space)
-
+    if agent == "Student":
+        models, h = get_student_model(env, observation_space, action_space, student_model_path, env_num)
+        return models, h
+    
+    
     raise ValueError(f"Agent {agent} not supported.")
 
+def get_student_model(env: ManagerBasedRLEnv, observation_space: Box, action_space: Box, student_model_path:str = "", env_num=1):
+    models={}
+    dense_encoder_input_size = env.unwrapped.observation_manager.group_obs_term_dim["policy"][-2][0]
+    sparse_encoder_input_size = env.observation_manager.group_obs_term_dim["policy"][-1][0]
+    
+    mlp_input_size = 4
+    
+    models["policy"] = GaussianNeuralNetwork_Student(
+        observation_space=observation_space,
+        action_space=action_space,
+        device=env.unwrapped.device,
+        mlp_input_size=mlp_input_size,
+        mlp_layers=[512, 256, 128],
+        mlp_activation="leaky_relu",
+        dense_encoder_input_size=dense_encoder_input_size,
+        sparse_encoder_input_size=sparse_encoder_input_size,
+        encoder_layers=[60, 20],
+        encoder_activation="leaky_relu",
+        student=student_model_path,
+    )
+    models["value"] = DeterministicNeuralNetwork_Student(
+        observation_space=observation_space,
+        action_space=action_space,
+        device=env.unwrapped.device,
+        mlp_input_size=mlp_input_size,
+        mlp_layers=[512, 256, 128],
+        mlp_activation="leaky_relu",
+        dense_encoder_input_size=dense_encoder_input_size,
+        sparse_encoder_input_size=sparse_encoder_input_size,
+        encoder_layers=[60, 20],
+        encoder_activation="leaky_relu",
+        student=student_model_path,
+    )
+    h = models["policy"].belief_encoder.init_hidden(env_num).to("cuda")
+    # print("hidden 출력중!")
+    # print(h.shape)
+    return models, h
 
 def get_model_gaussian(env: ManagerBasedRLEnv, observation_space: Box, action_space: Box):
     models = {}
-    encoder_input_size = env.unwrapped.observation_manager.group_obs_term_dim["policy"][-1][0]
+    dense_encoder_input_size = env.unwrapped.observation_manager.group_obs_term_dim["policy"][-2][0]
+    sparse_encoder_input_size = env.observation_manager.group_obs_term_dim["policy"][-1][0]
 
-    mlp_input_size = 5
+    print("dense_encoder_input_size : ", dense_encoder_input_size)      # 3721 = 61*61
+    print("sparse_encoder_input_size : ", sparse_encoder_input_size)    # 961 = 31*31
+    
+    mlp_input_size = 4
 
     models["policy"] = GaussianNeuralNetwork(
         observation_space=observation_space,
         action_space=action_space,
         device=env.unwrapped.device,
         mlp_input_size=mlp_input_size,
-        mlp_layers=[256, 160, 128],
+        mlp_layers=[512, 256, 128],
         mlp_activation="leaky_relu",
-        encoder_input_size=encoder_input_size,
-        encoder_layers=[80, 60],
+        dense_encoder_input_size=dense_encoder_input_size,
+        sparse_encoder_input_size=sparse_encoder_input_size,
+        encoder_layers=[60, 20],
         encoder_activation="leaky_relu",
     )
     models["value"] = DeterministicNeuralNetwork(
@@ -58,14 +105,21 @@ def get_model_gaussian(env: ManagerBasedRLEnv, observation_space: Box, action_sp
         action_space=action_space,
         device=env.unwrapped.device,
         mlp_input_size=mlp_input_size,
-        mlp_layers=[256, 160, 128],
+        mlp_layers=[512, 256, 128],
         mlp_activation="leaky_relu",
-        encoder_input_size=encoder_input_size,
-        encoder_layers=[80, 60],
+        dense_encoder_input_size=dense_encoder_input_size,
+        sparse_encoder_input_size=sparse_encoder_input_size,
+        encoder_layers=[60, 20],
         encoder_activation="leaky_relu",
     )
+    
+    print("============!!!!!!!!!!!!!!!!!!!!!!!!!!!!===========================================================")
+    print(f"get_models.py에서 출력중!")
+    print("models[\"policy\"] 정보 출력중:")
+    print(models["policy"])
+    print("============!!!!!!!!!!!!!!!!!!!!!!!!!!!!===========================================================")
+    
     return models
-
 
 def get_model_gaussian_conv(env: ManagerBasedRLEnv, observation_space: Box, action_space: Box):
     models = {}

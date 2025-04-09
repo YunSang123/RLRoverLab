@@ -45,6 +45,7 @@ class AckermannAction(ActionTerm):
         self._drive_joint_ids, self._drive_joint_names = self._asset.find_joints(self.cfg.drive_joint_names)
 
         self._steering_joint_ids, self._steering_joint_names = self._asset.find_joints(self.cfg.steering_joint_names)
+        print(f"self._steering_joint_ids = {self._steering_joint_names}")
 
         # remap joints to the order specified in the config.
         steering_order = cfg.steering_order
@@ -337,8 +338,8 @@ def osr_ackermann(lin_vel, ang_vel, cfg, device):
     # print(lin_vel)
     # print(ang_vel)
     # print("==================")
-    # lin_vel.fill_(0.04)
-    # ang_vel.fill_(1)
+    # lin_vel.fill_(0)
+    # ang_vel.fill_(-1)
     
     wheel_radius = cfg.wheel_radius  # wheel radius
     offset = cfg.offset              # offset
@@ -402,7 +403,12 @@ def osr_ackermann(lin_vel, ang_vel, cfg, device):
     vel_RR = torch.where(torch.abs(turning_radius) < minimum_radius,
                          torch.sqrt(torch.pow(d1,2)+torch.pow(d2,2))*ang_vel,  # 제자리 회전!
                          torch.where(ang_vel == 0, lin_vel, direction*turn_direction*r_RR*ang_vel))  # 제자리 회전이 아님!
-
+    # print(f"vel_FL = {vel_FL}")
+    # print(f"vel_FR = {vel_FR}")
+    # print(f"vel_ML = {vel_ML}")
+    # print(f"vel_MR = {vel_MR}")
+    # print(f"vel_RL = {vel_RL}")
+    # print(f"vel_RR = {vel_RR}")
     # Steering angles for specifically point turns
     # If turning radius is less than the distance between middle wheels
     # set steering angles for point turn, else
@@ -419,13 +425,19 @@ def osr_ackermann(lin_vel, ang_vel, cfg, device):
     theta_RR = torch.where(torch.abs(turning_radius) < minimum_radius,
                            -torch.atan2(d2,d1),
                            -turn_direction*torch.atan2(d2, torch.abs(turning_radius-d1)))       # case 1
-
+    # theta_FL = torch.zeros(1, device='cuda')
+    # theta_FR = torch.zeros(1, device='cuda')
+    # theta_FR.fill_(180*math.pi/180)
+    # theta_RL = torch.zeros(1, device='cuda')
+    # theta_RR = torch.zeros(1, device='cuda')
+    # theta_RR.fill_(-180*math.pi/180)
     
     # wheel_velocities = torch.stack([vel_FL, vel_FR, vel_ML, vel_MR, vel_RL, vel_RR], dim=1) # tmp
     wheel_velocities = torch.stack([vel_ML, vel_RL, vel_RR, vel_MR, vel_FL, vel_FR], dim=1)
     # steering_angles = torch.stack([theta_FL, theta_RL, theta_RR, theta_FR], dim=1)
     # steering_angles = torch.stack([theta_FL, theta_FR, theta_RL, theta_RR], dim=1)  # tmp
     steering_angles = torch.stack([theta_RL, theta_RR, theta_FL, theta_FR], dim=1)
+    # print(f"steering_angles = {steering_angles*180/math.pi}")
     # Convert wheel velocities from m/s to rad/s
     wheel_velocities = wheel_velocities / (wheel_radius*2)
     # Print steering_angles and wheel_velocitie

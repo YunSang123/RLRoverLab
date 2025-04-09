@@ -20,6 +20,172 @@ def get_activation(activation_name):
         raise ValueError(f"Activation function {activation_name} not supported.")
     return activation_fns[activation_name]
 
+class Layer(nn.Module):
+    def __init__(self,in_channels,out_channels, activation_function="elu"):
+        super(Layer,self).__init__()
+        self.activation_functions = {
+            "elu" : nn.ELU(),
+            "relu" : nn.ReLU(inplace=True),
+            "leakyrelu" :nn.LeakyReLU(),
+            "sigmoid" : nn.Sigmoid(),
+            "tanh" : nn.Tanh(),
+            "relu6" : nn.ReLU6()
+           } 
+        self.layer = nn.Sequential(
+            nn.Linear(in_channels,out_channels),
+            self.activation_functions[activation_function]
+        )
+    def forward(self,x):
+        return self.layer(x)
+
+class Encoder(nn.Module):
+    def __init__(
+            self, info, cfg):
+        super(Encoder,self).__init__()
+        encoder_features = cfg["encoder_features"]          # [1500,1000]
+        print(f"encoder_features = {encoder_features}")
+        activation_function = cfg["activation_function"]    # [leakyrelu]
+        
+        self.encoder_layers = nn.ModuleList() 
+        in_channels = info                         # encoder가 sparse면 in_channels는 441, encoder가 dense면 in_channels는 676
+        for feature in encoder_features:
+            self.encoder_layers.append(nn.Linear(in_channels, feature))
+            self.encoder_layers.append(nn.LeakyReLU(inplace=True))
+            in_channels = feature
+
+    def forward(self, x):
+        for layer in self.encoder_layers:
+            x = layer(x)
+        return x
+    
+class Belief_Encoder(nn.Module):
+    def __init__(
+            self, info, cfg, input_dim=120):
+        super(Belief_Encoder,self).__init__()
+        self.hidden_dim = cfg["hidden_dim"]                     # 300
+        self.n_layers = cfg["n_layers"]                         # 2
+        activation_function = cfg["activation_function"]        # leakyrelu
+        proprioceptive = info["proprioceptive"]                 # 4
+        input_dim = proprioceptive+input_dim                    # 4+2000=2004
+        
+        self.gru = nn.GRU(input_dim, self.hidden_dim, self.n_layers, batch_first=True)
+        self.gb = nn.ModuleList()
+        self.ga = nn.ModuleList()
+        gb_features = cfg["gb_features"]                        # [128,256,512,1024]
+        ga_features = cfg["ga_features"]                        # [128,256,512,1024]
+
+        in_channels = self.hidden_dim                           # 300
+        for feature in gb_features:                             # [128,128,120]
+            self.gb.append(Layer(in_channels, feature, activation_function))
+            in_channels = feature
+        
+        in_channels = self.hidden_dim                           # 300
+        for feature in ga_features:                             # [128,128,120]
+            self.ga.append(Layer(in_channels, feature, activation_function))
+            in_channels = feature
+
+        self.ga.append(nn.Sigmoid())
+
+    def forward(self, p, l_e, h):
+        # p = proprioceptive
+        # e = exteroceptive
+        # h = hidden state
+        # x = input data, h = hidden state
+        
+        p = p.unsqueeze(1)
+        
+        x = torch.cat((p,l_e),dim=2)
+        out, h = self.gru(x, h)
+        x_b = x_a = out
+        
+        for layer in self.gb:
+            x_b = layer(x_b)
+        for layer in self.ga:
+            x_a = layer(x_a)
+        x_a = l_e * x_a
+        # TODO IMPLEMENT GATE
+        belief = x_b + x_a
+
+        return belief, h, out
+
+    def init_hidden(self, batch_size):
+        weight = next(self.parameters()).data
+        hidden = weight.new(self.n_layers, batch_size, self.hidden_dim).zero_().to('cpu')
+        return hidden
+
+class Belief_Decoder(nn.Module):
+    def __init__(
+            self, info, cfg, n_input=50, hidden_dim=50,n_layers=2,activation_function="leakyrelu"):
+        super(Belief_Decoder,self).__init__()
+        exteroceptive = info["sparse"] + info["dense"]
+        gate_features = cfg["gate_features"] #[128,256,512, exteroceptive]
+        decoder_features = cfg["decoder_features"]#[128,256,512, exteroceptive]
+        #n_input = cfg[""]
+        gate_features.append(exteroceptive)
+        decoder_features.append(exteroceptive)
+        self.n_input = n_input
+        self.gate_encoder = nn.ModuleList()
+        self.decoder = nn.ModuleList()
+    
+
+        in_channels = self.n_input
+        for feature in gate_features:
+            self.gate_encoder.append(Layer(in_channels, feature, activation_function))
+            in_channels = feature
+        self.gate_encoder.append(nn.Sigmoid())  
+
+        in_channels = self.n_input
+        for feature in decoder_features:
+            self.decoder.append(Layer(in_channels, feature, activation_function))
+            in_channels = feature
+        
+
+    def forward(self, e, h):
+        gate = h[-1]
+        decoded = h[-1]
+       # gate = gate.repeat(e.shape[1], 1, 1).permute(1,0,2)
+       # decoded = decoded.repeat(e.shape[1], 1, 1).permute(1,0,2)
+        for layer in self.gate_encoder:
+            gate = layer(gate)
+
+        for layer in self.decoder:
+            decoded = layer(decoded)
+        x = e*gate
+        x = x + decoded
+        return x
+    
+    def init_weights(m):
+        if isinstance(m, nn.Linear):
+            torch.nn.init.xavier_uniform(m.weight)
+            m.bias.data.fill_(1.0)
+            
+class MLP(nn.Module):
+    def __init__(
+            self, info, cfg, belief_dim):
+        super(MLP,self).__init__()
+        self.mlp = nn.ModuleList()  # MLP for student policy
+        proprioceptive = info["proprioceptive"]             # 4
+        action_space = info["actions"]                      # 2
+        activation_function = cfg["activation_function"]    # leakyrelu
+        network_features = cfg["network_features"]          # [256,160,128]
+
+        in_channels = proprioceptive + belief_dim           # 124
+        for feature in network_features:
+            self.mlp.append(nn.Linear(in_channels, feature))
+            self.mlp.append(nn.LeakyReLU(inplace=True))
+            in_channels = feature
+
+        self.mlp.append(nn.Linear(in_channels,action_space))
+        self.mlp.append(nn.Tanh())
+        self.log_std_parameter = nn.Parameter(torch.zeros(action_space))
+
+    def forward(self, p, belief):
+        p = p.unsqueeze(1)
+        x = torch.cat((p,belief),dim=2)
+        
+        for layer in self.mlp:
+            x = layer(x)
+        return x, self.log_std_parameter
 
 class HeightmapEncoder(nn.Module):
     def __init__(self, in_channels, encoder_features=[80, 60], encoder_activation="leaky_relu"):
@@ -182,9 +348,10 @@ class GaussianNeuralNetwork(GaussianMixin, BaseModel):
         action_space,
         device,
         mlp_input_size=5,
-        mlp_layers=[256, 160, 128],
+        mlp_layers=[512, 256, 128],
         mlp_activation="leaky_relu",
-        encoder_input_size=None,
+        dense_encoder_input_size=None,
+        sparse_encoder_input_size=None,
         encoder_layers=[80, 60],
         encoder_activation="leaky_relu",
         **kwargs,
@@ -204,11 +371,16 @@ class GaussianNeuralNetwork(GaussianMixin, BaseModel):
         )
 
         self.mlp_input_size = mlp_input_size
-        self.encoder_input_size = encoder_input_size
+        self.dense_encoder_input_size = dense_encoder_input_size
+        self.sparse_encoder_input_size = sparse_encoder_input_size
 
         in_channels = self.mlp_input_size
-        if self.encoder_input_size is not None:
-            self.dense_encoder = HeightmapEncoder(self.encoder_input_size, encoder_layers, encoder_activation)
+        if self.dense_encoder_input_size is not None:
+            self.dense_encoder = HeightmapEncoder(self.dense_encoder_input_size, encoder_layers, encoder_activation)
+            in_channels += encoder_layers[-1]
+            
+        if self.sparse_encoder_input_size is not None:
+            self.sparse_encoder = HeightmapEncoder(self.sparse_encoder_input_size, encoder_layers, encoder_activation)
             in_channels += encoder_layers[-1]
 
         self.mlp = nn.ModuleList()
@@ -225,18 +397,182 @@ class GaussianNeuralNetwork(GaussianMixin, BaseModel):
 
     def compute(self, states, role="actor"):
         # Split the states into proprioception and heightmap if the heightmap is used.
-        if self.encoder_input_size is None:
+        if self.dense_encoder_input_size is None:
             x = states["states"]
         else:
-            encoder_output = self.dense_encoder(states["states"][:, self.mlp_input_size - 1:-1])
+            dense_encoder_output = self.dense_encoder(states["states"][:, self.mlp_input_size - 1:-1-self.sparse_encoder_input_size])
+            sparse_encoder_output = self.sparse_encoder(states["states"][:, self.mlp_input_size + self.dense_encoder_input_size - 1:-1])
             x = states["states"][:, 0:self.mlp_input_size]
-            x = torch.cat([x, encoder_output], dim=1)
+            x = torch.cat([x, dense_encoder_output, sparse_encoder_output], dim=1)
 
         # Compute the output of the MLP.
         for layer in self.mlp:
             x = layer(x)
 
         return x, self.log_std_parameter, {}
+    
+
+class GaussianNeuralNetwork_Student(GaussianMixin, BaseModel):
+    """Gaussian neural network model."""
+
+    def __init__(
+        self,
+        observation_space,
+        action_space,
+        device,
+        mlp_input_size=5,
+        mlp_layers=[512, 256, 128],
+        mlp_activation="leaky_relu",
+        dense_encoder_input_size=None,
+        sparse_encoder_input_size=None,
+        encoder_layers=[60, 20],
+        encoder_activation="leaky_relu",
+        student="",
+        **kwargs,
+    ):
+        """Initialize the Gaussian neural network model.
+
+        Args:
+            observation_space (gym.spaces.Space): The observation space of the environment.
+            action_space (gym.spaces.Space): The action space of the environment.
+            device (torch.device): The device to use for computation.
+            encoder_features (list): The number of features for each encoder layer.
+            encoder_activation (str): The activation function to use for each encoder layer.
+        """
+        BaseModel.__init__(self, observation_space, action_space, device)
+        GaussianMixin.__init__(
+            self, clip_actions=True, clip_log_std=True, min_log_std=-20.0, max_log_std=2.0, reduction="sum"
+        )
+
+        self.n_re = 1
+        self.n_pr = 4
+        self.n_sp = 441
+        self.n_de = 676
+        self.n_ac = 2
+        encoder_layers = {
+          "activation_function": "leakyrelu",
+          "encoder_features": [60, 20],
+        }
+        cfg_belief_encoder = {
+            "hidden_dim":       300,
+            "n_layers":         2,
+            "activation_function":  "leakyrelu",
+            "gb_features": [128,256,512,1024,40],
+            "ga_features": [128,256,512,1024,40]
+        }
+        cfg_belief_decoder = {
+            "activation_function": "leakyrelu",
+            "gate_features":    [1000,1500],
+            "decoder_features": [1000,1500]
+        }
+        cfg_mlp = {"activation_function": "leakyrelu",
+            "network_features": [512,256,128]}
+        info = {"reset" : 1, "actions" : 2, "proprioceptive" : 4,"sparse" : 441, "dense" : 676}
+        
+        self.sparse_encoder = Encoder(self.n_sp, encoder_layers)
+        self.dense_encoder = Encoder(self.n_de, encoder_layers)
+        encoder_dim = encoder_layers["encoder_features"][-1] * 2
+        self.belief_encoder = Belief_Encoder(info, cfg_belief_encoder, input_dim=encoder_dim)
+        self.belief_decoder = Belief_Decoder(info, cfg_belief_decoder, cfg_belief_encoder["hidden_dim"])
+        
+        self.MLP = MLP(info, cfg_mlp, belief_dim=encoder_dim)
+        
+        student_policy = torch.load(student, weights_only=True)["state_dict"]
+        
+        # Filter out encoder to only maintain network MLP
+        mlp_params = {k[4:]: v for k,v in student_policy.items() if (k.startswith("MLP") or "log_std_parameter" in k)}
+        sparse_encoder_params = {k[15:]: v for k,v in student_policy.items() if "sparse_encoder" in k}
+        dense_encoder_params = {k[14:]: v for k,v in student_policy.items() if "dense_encoder" in k}
+        belief_encoder_params = {k[15:]: v for k,v in student_policy.items() if "belief_encoder" in k}
+        # belief_decoder_params = {k[15:]: v for k,v in student_policy.items() if "belief_decoder" in k}
+        
+        # Load state dict
+        self.MLP.load_state_dict(mlp_params)
+        self.sparse_encoder.load_state_dict(sparse_encoder_params)
+        self.dense_encoder.load_state_dict(dense_encoder_params)
+        self.belief_encoder.load_state_dict(belief_encoder_params)
+        
+        self.MLP.to("cuda")
+        self.sparse_encoder.to("cuda")
+        self.dense_encoder.to("cuda")
+        self.belief_encoder.to("cuda")
+        
+        ####################################
+        # self.mlp_input_size = mlp_input_size
+        # self.dense_encoder_input_size = dense_encoder_input_size
+        # self.sparse_encoder_input_size = sparse_encoder_input_size
+
+        # in_channels = self.mlp_input_size
+        # if self.dense_encoder_input_size is not None:
+        #     self.dense_encoder = HeightmapEncoder(self.dense_encoder_input_size, encoder_layers, encoder_activation)
+        #     in_channels += encoder_layers[-1]
+            
+        # if self.sparse_encoder_input_size is not None:
+        #     self.sparse_encoder = HeightmapEncoder(self.sparse_encoder_input_size, encoder_layers, encoder_activation)
+        #     in_channels += encoder_layers[-1]
+
+        # self.mlp = nn.ModuleList()
+
+        # for feature in mlp_layers:
+        #     self.mlp.append(nn.Linear(in_channels, feature))
+        #     self.mlp.append(get_activation(mlp_activation))
+        #     in_channels = feature
+
+        # action_space = action_space.shape[0]
+        # self.mlp.append(nn.Linear(in_channels, action_space))
+        # self.mlp.append(nn.Tanh())
+        # self.log_std_parameter = nn.Parameter(torch.zeros(action_space))
+
+    def compute(self, x, h, role="actor"):
+        n_re = self.n_re    # 1
+        n_ac = self.n_ac    # 2
+        n_pr = self.n_pr    # 4
+        n_sp = self.n_sp    # 441
+        n_de = self.n_de    # 676
+        
+        x = x["states"]     # shape = [num_envs, num_states]
+        # print(x.shape)
+        
+        actions = x[:,n_re:n_re+n_ac]
+        proprioceptive = x[:,n_re+n_ac:n_re+n_ac+n_pr]
+        sparse = x[:,-(n_sp+n_de):-n_de]
+        dense = x[:,-n_de:]
+        # exteroceptive = torch.cat((sparse,dense),dim=2)
+        
+        # Pass exteroceptive information through encoder
+        e_l1 = self.sparse_encoder(sparse)
+        e_l2 = self.dense_encoder(dense)
+        
+        e_l1 = e_l1.unsqueeze(1)
+        e_l2 = e_l2.unsqueeze(1)
+        
+        # print("encoder output shape")
+        # print(e_l1.shape)
+        # print(e_l2.shape)
+        
+        e_l = torch.cat((e_l1,e_l2), dim=2)
+        
+        belief, h, out = self.belief_encoder(proprioceptive,e_l,h)
+        
+        # estimated = self.belief_decoder(exteroceptive,out)
+        
+        actions, log_std = self.MLP(proprioceptive,belief)
+        
+        #################################################################################################
+        # Split the states into proprioception and heightmap if the heightmap is used.
+        # if self.dense_encoder_input_size is None:
+        #     x = states["states"]
+        # else:
+        #     dense_encoder_output = self.dense_encoder(states["states"][:, self.mlp_input_size - 1:-1-self.sparse_encoder_input_size])
+        #     sparse_encoder_output = self.sparse_encoder(states["states"][:, self.mlp_input_size + self.dense_encoder_input_size - 1:-1])
+        #     x = states["states"][:, 0:self.mlp_input_size]
+        #     x = torch.cat([x, dense_encoder_output, sparse_encoder_output], dim=1)
+
+        # # Compute the output of the MLP.
+        # for layer in self.mlp:
+        #     x = layer(x)
+
+        return actions, self.MLP.log_std_parameter, h, {}
 
 
 class DeterministicNeuralNetwork(DeterministicMixin, BaseModel):
@@ -248,10 +584,78 @@ class DeterministicNeuralNetwork(DeterministicMixin, BaseModel):
         action_space,
         device,
         mlp_input_size=4,
-        mlp_layers=[256, 160, 128],
+        mlp_layers=[512, 256, 128],
         mlp_activation="leaky_relu",
-        encoder_input_size=None,
-        encoder_layers=[80, 60],
+        dense_encoder_input_size=None,
+        sparse_encoder_input_size=None,
+        encoder_layers=[60, 20],
+        encoder_activation="leaky_relu",
+        student="",
+        **kwargs,
+    ):
+        """Initialize the Gaussian neural network model.
+
+        Args:
+            observation_space (gym.spaces.Space): The observation space of the environment.
+            action_space (gym.spaces.Space): The action space of the environment.
+            device (torch.device): The device to use for computation.
+            encoder_features (list): The number of features for each encoder layer.
+            encoder_activation (str): The activation function to use for each encoder layer.
+        """
+        BaseModel.__init__(self, observation_space, action_space, device)
+        DeterministicMixin.__init__(self, clip_actions=False)
+
+        self.mlp_input_size = mlp_input_size
+        self.dense_encoder_input_size = dense_encoder_input_size
+        self.sparse_encoder_input_size = sparse_encoder_input_size
+
+        in_channels = self.mlp_input_size
+        if self.dense_encoder_input_size is not None:
+            self.dense_encoder = HeightmapEncoder(self.dense_encoder_input_size, encoder_layers, encoder_activation)
+            in_channels += encoder_layers[-1]
+        if self.sparse_encoder_input_size is not None:
+            self.sparse_encoder = HeightmapEncoder(self.sparse_encoder_input_size, encoder_layers, encoder_activation)
+            in_channels += encoder_layers[-1]
+
+        self.mlp = nn.ModuleList()
+
+        action_space = action_space.shape[0]
+        for feature in mlp_layers:
+            self.mlp.append(nn.Linear(in_channels, feature))
+            self.mlp.append(get_activation(mlp_activation))
+            in_channels = feature
+
+        self.mlp.append(nn.Linear(in_channels, 1))
+
+    def compute(self, states, role="actor"):
+        if self.dense_encoder_input_size is None:
+            x = states["states"]
+        else:
+            x = states["states"][:, :self.mlp_input_size]
+            dense_encoder_output = self.dense_encoder(states["states"][:, self.mlp_input_size - 1:-1-self.sparse_encoder_input_size])
+            sparse_encoder_output = self.sparse_encoder(states["states"][:, self.mlp_input_size + self.dense_encoder_input_size - 1:-1])
+            x = torch.cat([x, dense_encoder_output, sparse_encoder_output], dim=1)
+
+        for layer in self.mlp:
+            x = layer(x)
+
+        return x, {}
+    
+
+class DeterministicNeuralNetwork_Student(DeterministicMixin, BaseModel):
+    """Gaussian neural network model."""
+
+    def __init__(
+        self,
+        observation_space,
+        action_space,
+        device,
+        mlp_input_size=4,
+        mlp_layers=[512, 256, 128],
+        mlp_activation="leaky_relu",
+        dense_encoder_input_size=None,
+        sparse_encoder_input_size=None,
+        encoder_layers=[60, 20],
         encoder_activation="leaky_relu",
         **kwargs,
     ):
@@ -268,11 +672,15 @@ class DeterministicNeuralNetwork(DeterministicMixin, BaseModel):
         DeterministicMixin.__init__(self, clip_actions=False)
 
         self.mlp_input_size = mlp_input_size
-        self.encoder_input_size = encoder_input_size
+        self.dense_encoder_input_size = dense_encoder_input_size
+        self.sparse_encoder_input_size = sparse_encoder_input_size
 
         in_channels = self.mlp_input_size
-        if self.encoder_input_size is not None:
-            self.dense_encoder = HeightmapEncoder(self.encoder_input_size, encoder_layers, encoder_activation)
+        if self.dense_encoder_input_size is not None:
+            self.dense_encoder = HeightmapEncoder(self.dense_encoder_input_size, encoder_layers, encoder_activation)
+            in_channels += encoder_layers[-1]
+        if self.sparse_encoder_input_size is not None:
+            self.sparse_encoder = HeightmapEncoder(self.sparse_encoder_input_size, encoder_layers, encoder_activation)
             in_channels += encoder_layers[-1]
 
         self.mlp = nn.ModuleList()
@@ -286,12 +694,13 @@ class DeterministicNeuralNetwork(DeterministicMixin, BaseModel):
         self.mlp.append(nn.Linear(in_channels, 1))
 
     def compute(self, states, role="actor"):
-        if self.encoder_input_size is None:
+        if self.dense_encoder_input_size is None:
             x = states["states"]
         else:
             x = states["states"][:, :self.mlp_input_size]
-            encoder_output = self.dense_encoder(states["states"][:, self.mlp_input_size - 1:-1])
-            x = torch.cat([x, encoder_output], dim=1)
+            dense_encoder_output = self.dense_encoder(states["states"][:, self.mlp_input_size - 1:-1-self.sparse_encoder_input_size])
+            sparse_encoder_output = self.sparse_encoder(states["states"][:, self.mlp_input_size + self.dense_encoder_input_size - 1:-1])
+            x = torch.cat([x, dense_encoder_output, sparse_encoder_output], dim=1)
 
         for layer in self.mlp:
             x = layer(x)
@@ -427,7 +836,7 @@ class GaussianNeuralNetworkConv(GaussianMixin, BaseModel):
         action_space,
         device,
         mlp_input_size=5,
-        mlp_layers=[256, 160, 128],
+        mlp_layers=[512, 256, 128],
         mlp_activation="leaky_relu",
         dense_encoder_input_size=None,
         sparse_encoder_input_size=None,

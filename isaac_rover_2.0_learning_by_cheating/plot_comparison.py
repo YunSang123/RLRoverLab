@@ -39,7 +39,7 @@ for i in range(int(l_sp/re_sp) + 1):         # y 변화
     for j in range(int(l_sp/re_sp) + 1):     # x 변화
         sparse_x.append(input_x)
         sparse_y.append(input_y)
-        sparse_z.append(targets[j + i*(int(l_sp/re_sp) + 1)])
+        sparse_z.append(predictions[j + i*(int(l_sp/re_sp) + 1)])
         
         input_y = input_y + re_sp
     input_y = y_sp
@@ -56,7 +56,7 @@ for i in range(int(l_de/re_de) + 1):         # y 변화
     for j in range(int(l_de/re_de) + 1):     # x 변화
         dense_x.append(input_x)
         dense_y.append(input_y)
-        dense_z.append(targets[j + i*(int(l_de/re_de) + 1)])
+        dense_z.append(predictions[j + i*(int(l_de/re_de) + 1)])
         
         input_y = input_y + re_de
     input_y = y_de
@@ -82,4 +82,4 @@ plt.title("3D Scatter Plot")
 # 범례 추가
 ax.legend()
 
-plt.savefig("scatter_plot.png")
+plt.savefig("predictions_scatter_plot.png")

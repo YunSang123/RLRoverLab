@@ -136,7 +136,7 @@ class Trainer():
         train_ds = TeacherDataset("teacher_model/")
         train_loader = DataLoader(train_ds,batch_size=self.BATCH_SIZE,num_workers=0,pin_memory=False, shuffle=False)
         
-        model = Student(info=train_ds.get_info(), cfg=self.cfg, teacher="teacher_model/best_agent_190k.pt").to(self.DEVICE)
+        model = Student(info=train_ds.get_info(), cfg=self.cfg, teacher="teacher_model/best_agent_685k.pt").to(self.DEVICE)
         # print(model)
         loss_fn = {
             "behaviour":     nn.MSELoss(reduction="mean"),
@@ -171,9 +171,10 @@ class Trainer():
         ###################################################
         # load pre-trained student policy model to continue training
         if self.load == True:
-            load_student_model = torch.load("load/5_64_1e-4_10_32_1e-4.pt")["state_dict"]
+            load_student_model = torch.load("load/20_1e-4_100_5e-5_100_1e-5_100_5e-6_100_1e-6.pt")["state_dict"]
             model.load_state_dict(load_student_model)
             print("Student model loaded successfully!")
+            print(model)
         ###################################################
 
         for epoch in range(0,self.NUM_EPOCHS):
@@ -230,8 +231,8 @@ def cfg_fn():
             "exteroceptive":    0,
         },
         "learning":{
-            "learning_rate": 1e-4,      # tmp = 1e-4
-            "epochs": 5,                # tmp = 5
+            "learning_rate": 1e-6,      # tmp = 1e-4
+            "epochs": 100,                # tmp = 5
             "batch_size": 64,            # tmp = 8
         },
         "conv_encoder":{

@@ -158,7 +158,7 @@ def main():
     print(f'args_cli.task: {args_cli.task}')
     # agent_policy_path = gym.spec(args_cli.task).kwargs.pop("best_model_path") # tmp
 
-    teacher_policy_name = 'best_agent_190k'
+    teacher_policy_name = 'best_agent_685k'
     
     agent_policy_path = "teacher_load/" + teacher_policy_name + ".pt"
     

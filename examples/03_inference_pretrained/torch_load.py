@@ -1,7 +1,7 @@
 import torch
 
 # 체크포인트 파일 로드 (CPU로 매핑)
-checkpoint = torch.load("./load/osr_t278800.pt", map_location=torch.device('cpu'))
+checkpoint = torch.load("./student_load/osr_t278800.pt", map_location=torch.device('cpu'))
 
 # checkpoint가 딕셔너리 형태인지 확인 후 key 출력 및 optimizer 값 출력
 if isinstance(checkpoint, dict):

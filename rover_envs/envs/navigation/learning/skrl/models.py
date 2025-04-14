@@ -529,14 +529,21 @@ class GaussianNeuralNetwork_Student(GaussianMixin, BaseModel):
         n_pr = self.n_pr    # 4
         n_sp = self.n_sp    # 441
         n_de = self.n_de    # 676
+        # print(f"input_h = {h}")
         
         x = x["states"]     # shape = [num_envs, num_states]
-        # print(x.shape)
+        # print(f"n_re = {n_re}")
+        # print(f"n_ac = {n_ac}")
+        # print(f"n_pr = {n_pr}")
+        # print(f"n_sp = {n_sp}")
+        # print(f"n_de = {n_de}")
+        # print(f"x.shape = {x.shape}")
         
-        actions = x[:,n_re:n_re+n_ac]
-        proprioceptive = x[:,n_re+n_ac:n_re+n_ac+n_pr]
-        sparse = x[:,-(n_sp+n_de):-n_de]
-        dense = x[:,-n_de:]
+        proprioceptive = x[:,:n_pr]
+        # print(f"input_distance = {proprioceptive[:,2]}")
+        # print(f"input_heading = {proprioceptive[:,3]}")
+        dense = x[:,n_pr:n_pr+n_de]
+        sparse = x[:,n_pr+n_de:]
         # exteroceptive = torch.cat((sparse,dense),dim=2)
         
         # Pass exteroceptive information through encoder
@@ -571,6 +578,8 @@ class GaussianNeuralNetwork_Student(GaussianMixin, BaseModel):
         # # Compute the output of the MLP.
         # for layer in self.mlp:
         #     x = layer(x)
+        
+        # print(f"output_h = {h}")
 
         return actions, self.MLP.log_std_parameter, h, {}
 

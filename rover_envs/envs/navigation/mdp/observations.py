@@ -14,7 +14,6 @@ from mpl_toolkits.mplot3d import Axes3D
 if TYPE_CHECKING:
     from isaaclab.envs import ManagerBasedRLEnv
 
-
 # rover의 heading과 rover로부터 target position까지의 방향 벡터의 각도 차
 # target의 orientation은 전혀 신경쓸 필요 없다!
 def angle_to_target_observation(env: ManagerBasedRLEnv, command_name: str) -> torch.Tensor:
@@ -30,9 +29,10 @@ def angle_to_target_observation(env: ManagerBasedRLEnv, command_name: str) -> to
     
     heading_angle_diff = env.command_manager.get_command(command_name)[:, 3]
     # print(f"heading_angle_diff = {heading_angle_diff*180/math.pi}")
-    # print(f"state_heading = {angle.unsqueeze(-1)/math.pi*180}")
+    # print(f"state_heading = {angle.unsqueeze(-1)/math.pi}")
     return angle.unsqueeze(-1)
 
+# rover와 목표지점까지의 거리
 def distance_to_target_euclidean(env: ManagerBasedRLEnv, command_name: str):
     """Calculate the euclidean distance to the target."""
     target = env.command_manager.get_command(command_name)

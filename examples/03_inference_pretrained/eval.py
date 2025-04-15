@@ -19,7 +19,7 @@ parser.add_argument("--num_envs", type=int, default=3, help="Number of environme
 parser.add_argument("--task", type=str, default="AAURoverEnv-v0", help="Name of the task.")
 parser.add_argument("--seed", type=int, default=None, help="Seed used for the environment")
 parser.add_argument("--agent", type=str, default="PPO", help="Name of the agent.")
-parser.add_argument("--load_model", type=str, default="teacher", help="Choose between teacher and student")
+parser.add_argument("--load_model", type=str, default="student", help="Choose between teacher and student")
 
 # if parser.headless == True and parser.video == True:
 #     parser.video = False

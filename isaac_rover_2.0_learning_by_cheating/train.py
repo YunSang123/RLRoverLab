@@ -29,7 +29,7 @@ class Trainer():
         self.wandb_name = wandb_name
         
         # pre-trained된 student policy model을 load해서 이어서 학습할건지?
-        self.load = True
+        self.load = False
 
     def train_fn(self, train_loader, model, optimizer, loss_fn, scaler):
         loop = tqdm(train_loader)
@@ -71,8 +71,15 @@ class Trainer():
                         # data의 shape = torch.Size([8, 1499, 1124])
                         # model에 들어가는 input의 shape = torch.Size([8, 1, 1124])
                         input_data = data[:,j+i*horizon].unsqueeze(1)
+                        # print("===========")
                         # print(input_data[0,0,:7])
+                        # print(input_data[0,0,:7])
+                        # print("model에 input 들어간다잇!")
+                        
+                        # print(f"{j+1}")
                         a,p,h = model(data[:,j+i*horizon].unsqueeze(1),h)
+                        # print("a,p,h 계산 끝!")
+                        # print(a[0,0,:])
                         # a.shape = torch.Size([8, 1, 2])
                         # p.shape = torch.Size([8, 1, 1117])
                         actions[:,j,:]  = a.squeeze()
@@ -80,17 +87,30 @@ class Trainer():
                         # actions.shape = torch.Size([8, 50, 2])
                         # predictions.shape = torch.Size([8, 50, 1117])
                         
-                        # 전 timestep의 action을 다음 훈련 데이터의 action에 
-                        data[:,j+i*horizon+1,5:7] = actions[:,j].clone()
+                        # 전 timestep의 action을 다음 훈련 데이터의 action에 대입
+                        if j+i*horizon+1 == 1500:
+                            break
+                        else:
+                            data[:,j+i*horizon+1,5:7] = actions[:,j].clone()
                     del a,p
                     gc.collect()
                     
                     # behavior = actions
                     # reconstruction = exteroceptions
+                    # loss_lin = loss_fn["behaviour"](actions[:,:,0], targets_ac[:,i*horizon:i*horizon+horizon,0])
+                    # loss_ang = loss_fn["behaviour"](actions[:,:,1], targets_ac[:,i*horizon:i*horizon+horizon,1])
                     loss_be = loss_fn["behaviour"](actions, targets_ac[:,i*horizon:i*horizon+horizon])
                     loss_re = loss_fn["recontruction"](predictions, targets_ex[:,i*horizon:i*horizon+horizon])
                     loss_benchmark = loss_fn["recontruction"](data[:,i*horizon:i*horizon+horizon,7:],targets_ex[:,i*horizon:i*horizon+horizon])
-                    loss = 1.00000000000000000000 * loss_be + (1e-25 * loss_re)
+                    print(f"현재 학습률 : {self.curr_lr}")
+                    print(f"{self.epoch}번째 epoch의 loss_be = {loss_be}")
+                    # print(f"{self.epoch}번째 epoch의 loss_lin = {loss_lin}")
+                    # print(f"{self.epoch}번째 epoch의 loss_ang = {loss_ang}")
+                    # print(f"loss_be = {loss_be}")
+                    # print(f"loss_re = {loss_re}")
+                    # print(f"loss_benchmark = {loss_benchmark}")
+                    # loss = 1.00000000000000000000 * loss_be + (1e-25 * loss_re)
+                    loss = loss_be + (1e-25 * loss_re)
                     wandb.log({"Loss": loss.item(),
                         "Behaviour loss": loss_be,
                         "Reconstruction loss": loss_re,
@@ -129,14 +149,14 @@ class Trainer():
             print(f"RAM, VRAM 정리 완료!")
         return total_loss, total_be_loss, total_re_loss, total_loss_benchmark
 
-    def train(self):
+    def train(self, data_index):
         wandb.init(project='isaac-rover-2.0-learning-by-cheating', sync_tensorboard=True,name=self.wandb_name,group=self.wandb_group, entity="inside-out-anger-jys-inha-university")
         
         # train_dataset임
-        train_ds = TeacherDataset("teacher_model/")
+        train_ds = TeacherDataset("teacher_model/", data_index)
         train_loader = DataLoader(train_ds,batch_size=self.BATCH_SIZE,num_workers=0,pin_memory=False, shuffle=False)
         
-        model = Student(info=train_ds.get_info(), cfg=self.cfg, teacher="teacher_model/best_agent_685k.pt").to(self.DEVICE)
+        model = Student(info=train_ds.get_info(), cfg=self.cfg, teacher="teacher_model/540k.pt").to(self.DEVICE)
         # print(model)
         loss_fn = {
             "behaviour":     nn.MSELoss(reduction="mean"),
@@ -149,18 +169,18 @@ class Trainer():
         # parameters.extend(model.belief_decoder.parameters())
         # parameters.extend(model.encoder1.parameters())
         # parameters.extend(model.encoder2.parameters())
-        #parameters.extend(model.MLP.parameters())
+        # parameters.extend(model.MLP.parameters())
         # Set MLP.parameters() to false, to avoid accumulating unessecary gradients.
-        for param in model.MLP.parameters():
-            param.requires_grad = False
-        # for param in model.encoder1.parameters():
+        # for param in model.MLP.parameters():
+            # param.requires_grad = False
+        # for param in model.sparse_encoder.parameters():
         #     param.requires_grad = False
-        # for param in model.encoder2.parameters():
+        # for param in model.dense_encoder.parameters():
         #     param.requires_grad = False
         for param in model.belief_decoder.parameters():
             param.requires_grad = False
         # Define optimzer
-        optimizer = optim.Adam(parameters, lr=self.LEARNING_RATE)
+        
         #optimizer = optim.Adam(model.parameters(), lr=self.LEARNING_RATE)
         # Use automatic mixed precision
         scaler = torch.cuda.amp.GradScaler()
@@ -171,43 +191,53 @@ class Trainer():
         ###################################################
         # load pre-trained student policy model to continue training
         if self.load == True:
-            load_student_model = torch.load("load/20_1e-4_100_5e-5_100_1e-5_100_5e-6_100_1e-6.pt")["state_dict"]
+            load_student_model = torch.load("load/data3.pt")["state_dict"]
             model.load_state_dict(load_student_model)
             print("Student model loaded successfully!")
             print(model)
         ###################################################
-
-        for epoch in range(0,self.NUM_EPOCHS):
-            print(f"epoch = {epoch+1}")
-            self.epoch = epoch
-            loss, loss_be, loss_re, loss_benchmark = self.train_fn(train_loader, model, optimizer, loss_fn, scaler)
-            print(f"train_fn 끝!")
+        
+        now = datetime.datetime.now()
+        print(f"Training 시작 : {now}")
+        
+        for learning_rate in self.LEARNING_RATE:
+            print(f"learning_rate = {learning_rate}")
+            optimizer = optim.Adam(parameters, lr=learning_rate)
+            self.curr_lr = learning_rate
             
-            # print(loss_be/len(train_loader))
-            # print(loss_re/len(train_loader))
-             # Reset hidden units after each epoch
+            for epoch in range(0,self.NUM_EPOCHS):
+                print(f"epoch = {epoch+1}")
+                self.epoch = epoch
+                loss, loss_be, loss_re, loss_benchmark = self.train_fn(train_loader, model, optimizer, loss_fn, scaler)
+                print(f"train_fn 끝!")
+                
+                # print(loss_be/len(train_loader))
+                # print(loss_re/len(train_loader))
+                # Reset hidden units after each epoch
 
-            # save model
-            checkpoint = {
-                "state_dict": model.state_dict(),
-                "optimizer": optimizer.state_dict(),
-            }
+                # save model
+                checkpoint = {
+                    "state_dict": model.state_dict(),
+                    "optimizer": optimizer.state_dict(),
+                }
 
-            # # TODO calculate metrics
-            # metrics = 0
+                # # TODO calculate metrics
+                # metrics = 0
 
-            if loss < best:
-                print("Best model found => saving")
-                print(f"loss: {loss}, best: {best}")
-                best = loss
-                self.save_checkpoint(checkpoint,self.wandb_name)
-            gc.collect()
+                if loss < best:
+                    print("Best model found => saving")
+                    print(f"loss: {loss}, best: {best}")
+                    best = loss
+                    self.save_checkpoint(checkpoint,self.wandb_name)
+                gc.collect()
 
-            # TODO add stuff to wandb or tensorboard
-            # wandb.log({"Loss": loss/len(train_loader),
-            #            "Behaviour loss": loss_be/len(train_loader),
-            #            "Reconstruction loss": loss_re/len(train_loader),
-            #            "Benchmark loss": loss_benchmark/len(train_loader)})
+                # TODO add stuff to wandb or tensorboard
+                # wandb.log({"Loss": loss/len(train_loader),
+                #            "Behaviour loss": loss_be/len(train_loader),
+                #            "Reconstruction loss": loss_re/len(train_loader),
+                #            "Benchmark loss": loss_benchmark/len(train_loader)})
+        now = datetime.datetime.now()
+        print(f"Training 종료 : {now}")
 
     def save_checkpoint(self, state, dir=""):
         print("=> Saving checkpoint")
@@ -231,8 +261,8 @@ def cfg_fn():
             "exteroceptive":    0,
         },
         "learning":{
-            "learning_rate": 1e-6,      # tmp = 1e-4
-            "epochs": 100,                # tmp = 5
+            "learning_rate": [1e-3, 1e-4, 1e-5],      # tmp = 1e-4
+            "epochs": 5,                # tmp = 5
             "batch_size": 64,            # tmp = 8
         },
         "conv_encoder":{
@@ -264,13 +294,12 @@ def cfg_fn():
     return cfg
 
 def train():
-    for i in range(1):
+    for i in range(1,2):
         time_str = datetime.datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
-        
         
         wandb_group = f"test"
         #wandb_group = "test-group"
-        wandb_name = f"test{i+1}"
+        wandb_name = f"test{i}"
 
         wandb.init(project='isaac-rover-2.0-learning-by-cheating', sync_tensorboard=True, name=wandb_name, group=wandb_group, entity="inside-out-anger-jys-inha-university")
         
@@ -287,7 +316,7 @@ def train():
             cfg["learning"]["learning_rate"] = wandb.config.lr
             cfg["learning"]["batch_size"] = wandb.config.batch_size
         trainer = Trainer(cfg,wandb_name)
-        trainer.train()
+        trainer.train(i)
         wandb.finish()
 
 def my_loss(output: torch.Tensor, target: torch.Tensor):

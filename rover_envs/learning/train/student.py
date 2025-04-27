@@ -15,6 +15,8 @@ def Student_agent(experiment_cfg, observation_space: Box, action_space: Box, env
     memory = RandomMemory(memory_size=memory_size, num_envs=env.num_envs, device=env.device)
     # Get the models
     models, h = get_models("Student", env, observation_space, action_space, conv, student_model_path, env_num)
+    print("student model 출력중!")
+    print(models)
 
     # Agent cfg
     agent_cfg = PPO_DEFAULT_CONFIG.copy()

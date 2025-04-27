@@ -4,7 +4,6 @@ from skrl.models.torch.base import Model as BaseModel
 from skrl.models.torch.deterministic import DeterministicMixin
 from skrl.models.torch.gaussian import GaussianMixin
 
-
 def get_activation(activation_name):
     """Get the activation function by name."""
     activation_fns = {
@@ -347,7 +346,7 @@ class GaussianNeuralNetwork(GaussianMixin, BaseModel):
         observation_space,
         action_space,
         device,
-        mlp_input_size=5,
+        mlp_input_size=4,
         mlp_layers=[512, 256, 128],
         mlp_activation="leaky_relu",
         dense_encoder_input_size=None,
@@ -400,9 +399,10 @@ class GaussianNeuralNetwork(GaussianMixin, BaseModel):
         if self.dense_encoder_input_size is None:
             x = states["states"]
         else:
-            dense_encoder_output = self.dense_encoder(states["states"][:, self.mlp_input_size - 1:-1-self.sparse_encoder_input_size])
-            sparse_encoder_output = self.sparse_encoder(states["states"][:, self.mlp_input_size + self.dense_encoder_input_size - 1:-1])
-            x = states["states"][:, 0:self.mlp_input_size]
+            dense_encoder_output = self.dense_encoder(states["states"][:, self.mlp_input_size:self.mlp_input_size+self.dense_encoder_input_size])
+            sparse_encoder_output = self.sparse_encoder(states["states"][:, self.mlp_input_size+self.dense_encoder_input_size:])
+            x = states["states"][:,:self.mlp_input_size]
+            print(f"x = {x}")
             x = torch.cat([x, dense_encoder_output, sparse_encoder_output], dim=1)
 
         # Compute the output of the MLP.
@@ -492,6 +492,12 @@ class GaussianNeuralNetwork_Student(GaussianMixin, BaseModel):
         self.dense_encoder.load_state_dict(dense_encoder_params)
         self.belief_encoder.load_state_dict(belief_encoder_params)
         
+        print("student policy 출력!!!!!\n"*5)
+        print(mlp_params)
+        print(sparse_encoder_params)
+        print(dense_encoder_params)
+        print(belief_encoder_params)
+        
         self.MLP.to("cuda")
         self.sparse_encoder.to("cuda")
         self.dense_encoder.to("cuda")
@@ -537,9 +543,10 @@ class GaussianNeuralNetwork_Student(GaussianMixin, BaseModel):
         # print(f"n_pr = {n_pr}")
         # print(f"n_sp = {n_sp}")
         # print(f"n_de = {n_de}")
-        # print(f"x.shape = {x.shape}")
+        print(f"x.shape = {x.shape}")
         
         proprioceptive = x[:,:n_pr]
+        print(f"proprioception = {proprioceptive}")
         # print(f"input_distance = {proprioceptive[:,2]}")
         # print(f"input_heading = {proprioceptive[:,3]}")
         dense = x[:,n_pr:n_pr+n_de]

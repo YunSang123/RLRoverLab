@@ -74,8 +74,7 @@ def get_student_model(env: ManagerBasedRLEnv, observation_space: Box, action_spa
         student=student_model_path,
     )
     h = models["policy"].belief_encoder.init_hidden(env_num).to("cuda")
-    # print("hidden 출력중!")
-    # print(h.shape)
+    
     return models, h
 
 def get_model_gaussian(env: ManagerBasedRLEnv, observation_space: Box, action_space: Box):

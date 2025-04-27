@@ -158,11 +158,12 @@ def main():
     print(f'args_cli.task: {args_cli.task}')
     # agent_policy_path = gym.spec(args_cli.task).kwargs.pop("best_model_path") # tmp
 
-    teacher_policy_name = 'best_agent_685k'
+    teacher_policy_name = '540k'
     
     agent_policy_path = "teacher_load/" + teacher_policy_name + ".pt"
     
-    file_name = teacher_policy_name + "_data.pt"
+    file_name = teacher_policy_name + "_data"
+    
     print("agent_policy_path : ", agent_policy_path)
     
     agent.load(agent_policy_path)
@@ -248,20 +249,21 @@ def main():
     
     ###########################################################
 
-
     ########################################
     # 원래 eval.py 내용
     trainer_cfg = experiment_cfg["trainer"]
     print(trainer_cfg)
 
     trainer = SkrlSequentialLogTrainer(cfg=trainer_cfg, agents=agent, env=env)
-    trainer.record(file_name)
+    for i in range(2,11):
+        index_str = f'{i}'
+        dataset_file_name = file_name+index_str+".pt"
+        print(dataset_file_name)
+        trainer.record(dataset_file_name)
     ########################################
-    
 
     env.close()
     simulation_app.close()
-
 
 if __name__ == "__main__":
     main()

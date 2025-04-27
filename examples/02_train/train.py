@@ -238,7 +238,7 @@ def train():
     # 기존 모델 체크포인트 로드
     #######################
     if args_cli.load:   # 기존 model을 이어서 학습
-        checkpoint_path = "./load/best_agent_355k.pt"
+        checkpoint_path = "./load/260k.pt"
         # agent.load하는 경로 : /isaac-sim/kit/python/lib/python3.10/site-packages/skrl/agents/torch/base.py
         agent.load(checkpoint_path)
     else:               # 새로 학습.

@@ -9,14 +9,14 @@ from heightmap_distribution import Heightmap
 
 # TODO add noises to dataset
 class TeacherDataset(Dataset):
-    def __init__(self, data_dir):
+    def __init__(self, data_dir, data_index):
 
         self.debug = True
 
         # Import data and setup variables
-        sort_data(data_dir)
+        # sort_data(data_dir)
         # self.data = torch.load(data_dir + "data.pt", map_location='cpu')
-        self.data = torch.load(data_dir + "data.pt")
+        self.data = torch.load(data_dir + "540k_data" +f"{data_index}" + ".pt")
         # print("self.data 출력중!\n"*10)
         # print(self.data)
         # self.remove_idx = torch.load('remove_idx.pt').to('cpu')
@@ -37,31 +37,35 @@ class TeacherDataset(Dataset):
         max_delay = 0
         info = self.get_info()
         gt = self.data["data"][:, index]
+        # print(gt[6,:7])
+        # gt.shape = torch.Size([1500, 1124])
         
         # add_noise를 통해 훈련 데이터에 noise 추가
         # exteroception 외에는 noise 추가 X
         data = self.add_noise(gt)   # GPU에 로드
+        # data.shape = torch.Size([1500, 1124])
         
         # shift actions to simulate random delay for whole rover
         delay = random.randint(0, max_delay)
         
         # re = 1
         # ac = 2
-        # ex = 1177
+        # ex = 1117
         re, ac, ex = info["reset"], info["actions"], info["sparse"] + info["dense"]
-        actions_delayed = torch.roll(data[:, re:re + ac], -delay, 0)
-        actions_delayed = actions_delayed[:-(max_delay+1), :]
-        data = data[:-(max_delay+1), :]
-        gt = gt[:-(max_delay+1), :]
-        data[:, re:re + ac] = actions_delayed
+        # actions_delayed = torch.roll(data[:, re:re + ac], -delay, 0)
+        # actions_delayed.shape = torch.Size([1500, 2])
+        # actions_delayed = actions_delayed[:-(max_delay+1), :]
+        # actions_delayed.shape = torch.Size([1499, 2])
+        # data = data[:-(max_delay+1), :]
+        # data.shape = torch.Size([1499,1124])
+        # gt = gt[:-(max_delay+1), :]
+        # gt.shape = torch.Size([1499, 1124])
+        # data[:, re:re + ac] = actions_delayed
         gt_ac = gt[:, re:re + ac]
         gt_ex = gt[:, -ex:]
-        # print(self.remove_idx+7) 
-        # data[:, self.remove_idx+7] = 0 ## REMOVE POINTS IN OCCLUSSION
-        # print(data.shape)
-        # print(data[0,self.remove_idx+7])
+        # gt_ac.shape = torch.Size([1499, 2])
+        # gt_ex.shape = torch.Size([1499, 1117])
 
-        # data[:, self.remove_idx+7] = 
         NEW_NOISE_LEVELS = False
         if NEW_NOISE_LEVELS:
             # Add offset
@@ -160,6 +164,7 @@ class TeacherDataset(Dataset):
                 torch.add(rand, offset)
             else:
                 torch.add(rand, offset)
+        # print(f"rand = {rand}")
         return rand
 
     def simulate_missing_height_points(self, heights, missing_point_probability, device='cuda:0'):

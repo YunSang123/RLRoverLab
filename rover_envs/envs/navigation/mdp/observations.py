@@ -5,6 +5,7 @@ import math
 import torch
 from isaaclab.managers import SceneEntityCfg
 from isaaclab.sensors import RayCaster
+import random
 
 import matplotlib.pyplot as plt
 from mpl_toolkits.mplot3d import Axes3D
@@ -43,6 +44,60 @@ def distance_to_target_euclidean(env: ManagerBasedRLEnv, command_name: str):
     
     return distance.unsqueeze(-1)
 
+# noise 모드 선택
+def get_noise_mode():
+    # print(f"get_noise 함수 실행")
+    noise_mode = {}
+    r = random.random()
+    if r <= 0.6:
+        # low
+        noise_mode["dev"] = 0.1
+        noise_mode["is_add_offset"] = False
+        noise_mode["offset"] = 0.0
+        noise_mode["is_offset_dev"] = False
+        noise_mode["offset_dev"] = False
+        noise_mode["is_missing_points"] = True
+        noise_mode["missing_points_prob"] = 0.1
+    elif r <= 0.9:
+        # low + offset
+        noise_mode["dev"] = 0.1
+        noise_mode["is_add_offset"] = True
+        noise_mode["offset"] = 0.05
+        noise_mode["is_offset_dev"] = False
+        noise_mode["offset_dev"] = False
+        noise_mode["is_missing_points"] = True
+        noise_mode["missing_points_prob"] = 0.1
+    else:
+        # high
+        noise_mode["dev"] = 0.2
+        noise_mode["is_add_offset"] = False
+        noise_mode["offset"] = 0.0
+        noise_mode["is_offset_dev"] = False
+        noise_mode["offset_dev"] = False
+        noise_mode["is_missing_points"] = True
+        noise_mode["missing_points_prob"] = 0.1
+    return noise_mode
+
+# noise 추가하기
+def create_rand_tensor(dev, shape, add_offset=False, offset=0, is_offset_dev=False, offset_dev=0.0, device='cuda:0'):
+        # print(f"create_rand_tensor 함수 실행")
+        # not possible to move height points on xy plane
+        
+        rand = torch.empty(shape, device=device).normal_(mean=0,std=dev)
+        # rand = torch.rand(shape)
+        # rand = torch.multiply(rand, dev * 2)
+        # rand = torch.subtract(rand, dev)
+        #print(rand.shape, rand.mean())
+        if add_offset:
+            if is_offset_dev:
+                offset = torch.rand(shape, device=device)
+                offset = torch.multiply(offset, offset_dev * 2)
+                offset = torch.subtract(offset, dev)
+                torch.add(rand, offset)
+            else:
+                torch.add(rand, offset)
+        # print(f"rand = {rand}")
+        return rand
 
 def height_scan_rover(env: ManagerBasedRLEnv, sensor_cfg: SceneEntityCfg) -> torch.Tensor:
     """Calculate the height scan of the rover.
@@ -148,9 +203,20 @@ def height_scan_rover(env: ManagerBasedRLEnv, sensor_cfg: SceneEntityCfg) -> tor
         
     #     plt.savefig("dense_map.png")
     
-
+    ##########################
+    # student policy eval하기 위함
+    ##########################
+    height_scan = sensor.data.pos_w[:, 2].unsqueeze(1) - sensor.data.ray_hits_w[..., 2] - 0.26878
+    # noise_mode = get_noise_mode()
+    # noise = create_rand_tensor(noise_mode["dev"],
+    #                            height_scan.shape,
+    #                            add_offset=noise_mode["is_add_offset"],
+    #                            offset=noise_mode["offset"],
+    #                            is_offset_dev=noise_mode["is_offset_dev"],
+    #                            offset_dev=noise_mode["offset_dev"])
+    # height_scan = torch.add(height_scan, noise)
     
-    return sensor.data.pos_w[:, 2].unsqueeze(1) - sensor.data.ray_hits_w[..., 2] - 0.26878
+    return height_scan
 
 # rover의 heading과 target pose의 orientation 사이의 각도 차
 def angle_diff(env: ManagerBasedRLEnv, command_name: str) -> torch.Tensor:

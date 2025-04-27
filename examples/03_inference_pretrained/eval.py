@@ -15,11 +15,11 @@ parser.add_argument("--video", action="store_true", default=False, help="Record 
 parser.add_argument("--video_length", type=int, default=1500, help="Length of the recorded video (in steps).")
 parser.add_argument("--video_interval", type=int, default=100, help="Interval between video recordings (in steps).")
 parser.add_argument("--cpu", action="store_true", default=False, help="Use CPU pipeline.")
-parser.add_argument("--num_envs", type=int, default=3, help="Number of environments to simulate.")
+parser.add_argument("--num_envs", type=int, default=100, help="Number of environments to simulate.")
 parser.add_argument("--task", type=str, default="AAURoverEnv-v0", help="Name of the task.")
 parser.add_argument("--seed", type=int, default=None, help="Seed used for the environment")
 parser.add_argument("--agent", type=str, default="PPO", help="Name of the agent.")
-parser.add_argument("--load_model", type=str, default="student", help="Choose between teacher and student")
+parser.add_argument("--load_model", type=str, default="teacher", help="Choose between teacher and student")
 
 # if parser.headless == True and parser.video == True:
 #     parser.video = False
@@ -164,14 +164,14 @@ def main():
         # agent_policy_path = gym.spec(args_cli.task).kwargs.pop("best_model_path") # tmp
         
         # agent model load하기
-        agent_policy_path = "teacher_load/best_agent_685k.pt"
+        agent_policy_path = "teacher_load/540k.pt"
         print("agent_policy_path : ", agent_policy_path)
         
         agent.load(agent_policy_path)
         
     # student model 불러오기
     elif args_cli.load_model == 'student':
-        student_model_path = "student_load/20_1e-4_100_5e-5_100_1e-5_100_5e-6_100_1e-6.pt"
+        student_model_path = "student_load/best.pt"
         agent, h = get_agent(args_cli.load_model, env, observation_space, action_space, experiment_cfg, conv=False, student_model_path=student_model_path, env_num=args_cli.num_envs)
     
     trainer_cfg = experiment_cfg["trainer"]

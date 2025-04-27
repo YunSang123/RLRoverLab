@@ -378,6 +378,7 @@ class Student(nn.Module):
         self.dense_encoder.to("cuda")
 
     def forward(self, x, h):
+        # print("model에 input 들어왔다잇!")
         n_re = self.n_re    # 1
         n_ac = self.n_ac    # 2
         n_pr = self.n_pr    # 4
@@ -385,12 +386,12 @@ class Student(nn.Module):
         n_de = self.n_de    # 676
         # print("num of state")
         # print(n_re, n_ac, n_pr, n_sp, n_de)
-        reset = x[:,:, 0:n_re]
+        # reset = x[:,:, 0:n_re]
         # print(f"reset = {reset}")
-        actions = x[:,:,n_re:n_re+n_ac]
+        # actions = x[:,:,n_re:n_re+n_ac]
         # print(f"actions = {actions}")
-        proprioceptive = x[:,:,n_re+n_ac:n_re+n_ac+n_pr]
-        # print(f"proprioceptive = {proprioceptive}")
+        proprioceptive = x[:,:,n_re:n_re+n_pr]
+        # print(f"proprioceptive = {proprioceptive[0,0,:]}")
         sparse = x[:,:,-(n_sp+n_de):-n_de]
         dense = x[:,:,-n_de:]
         exteroceptive = torch.cat((sparse,dense),dim=2)

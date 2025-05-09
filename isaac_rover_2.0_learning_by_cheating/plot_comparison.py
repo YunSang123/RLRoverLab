@@ -2,9 +2,10 @@ import torch
 import matplotlib.pyplot as plt
 from mpl_toolkits.mplot3d import Axes3D
 
-input = torch.load('input.pt').to('cpu')
-predictions = torch.load('predictions.pt').to('cpu')
-targets = torch.load('targets.pt').to('cpu')
+input = torch.load('0.1_noise.pt').to('cpu')
+input = input[10,:]
+targets = torch.load('0.1_gt.pt').to('cpu')
+targets = targets[10,:]
 
 # resolution
 re_sp = 0.1         # 0.1m
@@ -39,7 +40,7 @@ for i in range(int(l_sp/re_sp) + 1):         # y 변화
     for j in range(int(l_sp/re_sp) + 1):     # x 변화
         sparse_x.append(input_x)
         sparse_y.append(input_y)
-        sparse_z.append(predictions[j + i*(int(l_sp/re_sp) + 1)])
+        sparse_z.append(targets[j + i*(int(l_sp/re_sp) + 1)])
         
         input_y = input_y + re_sp
     input_y = y_sp
@@ -56,7 +57,7 @@ for i in range(int(l_de/re_de) + 1):         # y 변화
     for j in range(int(l_de/re_de) + 1):     # x 변화
         dense_x.append(input_x)
         dense_y.append(input_y)
-        dense_z.append(predictions[j + i*(int(l_de/re_de) + 1)])
+        dense_z.append(targets[j + i*(int(l_de/re_de) + 1)])
         
         input_y = input_y + re_de
     input_y = y_de
@@ -77,9 +78,9 @@ ax.scatter(dense_x, dense_y, dense_z, c='red', marker='^', label='dense')
 ax.set_xlabel('X')
 ax.set_ylabel('Y')
 ax.set_zlabel('Z')
-plt.title("3D Scatter Plot")
+plt.title("High noise level 3D Scatter Plot")
 
 # 범례 추가
 ax.legend()
 
-plt.savefig("predictions_scatter_plot.png")
+plt.savefig("0.1_targets_scatter_plot.png")

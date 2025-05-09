@@ -29,7 +29,7 @@ class Trainer():
         self.wandb_name = wandb_name
         
         # pre-trained된 student policy model을 load해서 이어서 학습할건지?
-        self.load = False
+        self.load = True
 
     def train_fn(self, train_loader, model, optimizer, loss_fn, scaler):
         loop = tqdm(train_loader)
@@ -87,11 +87,19 @@ class Trainer():
                         # actions.shape = torch.Size([8, 50, 2])
                         # predictions.shape = torch.Size([8, 50, 1117])
                         
+                        # gt_ac vs pred_ac
+                        # print("gt_ac vs pred_ac")
+                        # for k in range(64):
+                        #     loss = targets_ac[k,i*horizon+j,1] - actions[k,j,1]
+                        #     bar_length = int(loss * 100)  # 막대의 길이는 100글자까지
+                        #     print(f"{k:2}: {'█' * bar_length} ({loss:.4f})")
+                            # print(f"{targets_ac[k,i*horizon+j,1]:.4f} vs {actions[k,j,1]:.4f}")
+                        
                         # 전 timestep의 action을 다음 훈련 데이터의 action에 대입
-                        if j+i*horizon+1 == 1500:
+                        if (j+i*horizon+1) % 1500 == 0:
                             break
                         else:
-                            data[:,j+i*horizon+1,5:7] = actions[:,j].clone()
+                            data[:,j+i*horizon+1,1:3] = actions[:,j].clone()
                     del a,p
                     gc.collect()
                     
@@ -104,6 +112,8 @@ class Trainer():
                     loss_benchmark = loss_fn["recontruction"](data[:,i*horizon:i*horizon+horizon,7:],targets_ex[:,i*horizon:i*horizon+horizon])
                     print(f"현재 학습률 : {self.curr_lr}")
                     print(f"{self.epoch}번째 epoch의 loss_be = {loss_be}")
+                    # print(f"gt_action = {targets_ac[:,i*horizon:i*horizon+horizon].shape}")
+                    # print(f"predict_ac = {actions.shape}")
                     # print(f"{self.epoch}번째 epoch의 loss_lin = {loss_lin}")
                     # print(f"{self.epoch}번째 epoch의 loss_ang = {loss_ang}")
                     # print(f"loss_be = {loss_be}")
@@ -114,7 +124,7 @@ class Trainer():
                     wandb.log({"Loss": loss.item(),
                         "Behaviour loss": loss_be,
                         "Reconstruction loss": loss_re,
-                        "Benchmark loss": loss_benchmark},)
+                        "Benchmark loss": loss_benchmark})
                 
                 # backward
                 optimizer.zero_grad()                               # gradient를 0으로 초기화
@@ -191,7 +201,7 @@ class Trainer():
         ###################################################
         # load pre-trained student policy model to continue training
         if self.load == True:
-            load_student_model = torch.load("load/data3.pt")["state_dict"]
+            load_student_model = torch.load("load/data1_5.pt")["state_dict"]
             model.load_state_dict(load_student_model)
             print("Student model loaded successfully!")
             print(model)
@@ -294,7 +304,7 @@ def cfg_fn():
     return cfg
 
 def train():
-    for i in range(1,2):
+    for i in range(2,3):
         time_str = datetime.datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
         
         wandb_group = f"test"
@@ -316,7 +326,7 @@ def train():
             cfg["learning"]["learning_rate"] = wandb.config.lr
             cfg["learning"]["batch_size"] = wandb.config.batch_size
         trainer = Trainer(cfg,wandb_name)
-        trainer.train(i)
+        trainer.train(data_index=i)
         wandb.finish()
 
 def my_loss(output: torch.Tensor, target: torch.Tensor):

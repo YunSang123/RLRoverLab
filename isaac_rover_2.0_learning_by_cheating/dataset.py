@@ -42,6 +42,7 @@ class TeacherDataset(Dataset):
         
         # add_noise를 통해 훈련 데이터에 noise 추가
         # exteroception 외에는 noise 추가 X
+        print(f"{index}번째 noise 추가 중!")
         data = self.add_noise(gt)   # GPU에 로드
         # data.shape = torch.Size([1500, 1124])
         
@@ -112,6 +113,19 @@ class TeacherDataset(Dataset):
         if noise_mode["is_missing_points"]:
             noisy_data[:, 7:] = self.simulate_missing_height_points(noisy_data[:, 7:],
                                                                     noise_mode["missing_points_prob"])
+        
+        ###################################33
+        # 각 노이즈 레벨에 따른 gt, noise exteroception을 저장
+        # if noise_mode["status"] == "low":
+        #     torch.save(gt[:, 7:].detach(),"0.6_gt.pt")
+        #     torch.save(noisy_data.detach(), "0.6_noise.pt")
+        # elif noise_mode["status"] == "low+offset":
+        #     torch.save(gt[:, 7:].detach(),"0.3_gt.pt")
+        #     torch.save(noisy_data.detach(), "0.3_noise.pt")
+        # elif noise_mode["status"] == "high":
+        #     torch.save(gt[:, 7:].detach(),"0.1_gt.pt")
+        #     torch.save(noisy_data.detach(), "0.1_noise.pt")
+            
         return noisy_data
 
     def get_noise_mode(self):
@@ -120,6 +134,7 @@ class TeacherDataset(Dataset):
         r = random.random()
         if r <= 0.6:
             # low
+            noise_mode["status"] = "low"
             noise_mode["dev"] = 0.1
             noise_mode["is_add_offset"] = False
             noise_mode["offset"] = 0.0
@@ -129,6 +144,7 @@ class TeacherDataset(Dataset):
             noise_mode["missing_points_prob"] = 0.1
         elif r <= 0.9:
             # low + offset
+            noise_mode["status"] = "low+offset"
             noise_mode["dev"] = 0.1
             noise_mode["is_add_offset"] = True
             noise_mode["offset"] = 0.05
@@ -138,6 +154,7 @@ class TeacherDataset(Dataset):
             noise_mode["missing_points_prob"] = 0.1
         else:
             # high
+            noise_mode["status"] = "high"
             noise_mode["dev"] = 0.2
             noise_mode["is_add_offset"] = False
             noise_mode["offset"] = 0.0

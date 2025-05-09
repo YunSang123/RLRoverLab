@@ -184,7 +184,7 @@ class Belief_Encoder(nn.Module):
         self.n_layers = cfg["n_layers"]                         # 2
         activation_function = cfg["activation_function"]        # leakyrelu
         proprioceptive = info["proprioceptive"]                 # 4
-        input_dim = proprioceptive+input_dim                    # 4+2000=2004
+        input_dim = proprioceptive+input_dim                    # 4+40=44
         
         self.gru = nn.GRU(input_dim, self.hidden_dim, self.n_layers, batch_first=True)
         self.gb = nn.ModuleList()
@@ -218,6 +218,8 @@ class Belief_Encoder(nn.Module):
             x_b = layer(x_b)
         for layer in self.ga:
             x_a = layer(x_a)
+        # print(f"l_e.shape = {l_e.shape}")
+        # print(f"x_a.shape = {x_a.shape}")
         x_a = l_e * x_a
         # TODO IMPLEMENT GATE
         belief = x_b + x_a

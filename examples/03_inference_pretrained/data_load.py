@@ -1,5 +1,5 @@
 import torch
 
-data = torch.load('260k_data1.pt')
+data = torch.load('540k_data1.pt')
 
-print(data['data'][6,0,:7])
+print(data["data"].shape)

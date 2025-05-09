@@ -312,7 +312,7 @@ class RoverEnvCfg(ManagerBasedRLEnvCfg):
         self.sim.dt = 1 / 60.0
         self.decimation = 6
         self.episode_length_s = 150
-        self.viewer.eye = (-3.0, -3.0, 3.5)
+        self.viewer.eye = (5.0, 5.0, 15.0)
 
         # update sensor periods
         if self.scene.dense_height_scanner is not None:
